@@ -1,0 +1,9 @@
+# python==3.12; tested on python 3.12.12
+pillow
+numpy
+torch
+torchvision
+timm==0.9.16
+opencv-python
+mediapipe==0.10.13
+emotiefflib
