@@ -2,18 +2,21 @@
 Модуль детекции лиц и распознавания эмоций
 """
 
+import typing
+from collections import deque
+
+import torch
 import cv2
 import mediapipe as mp
-from collections import deque
 from emotiefflib.facial_analysis import EmotiEffLibRecognizer
 from emotiefflib.facial_analysis import get_model_list
-
 
 # Настройка MediaPipe
 mp_face_detection = mp.solutions.face_detection
 mp_face_mesh = mp.solutions.face_mesh
 mp_drawing = mp.solutions.drawing_utils
 mp_drawing_styles = mp.solutions.drawing_styles
+
 
 class FaceDetector:
     """Детектор лиц MediaPipe Full-Range (для разных дистанций)"""
@@ -68,6 +71,7 @@ class FaceDetector:
 
     def close(self):
         self.detector.close()
+
 
 class EmotionRecognizer:
     """Распознавание с temporal smoothing + confidence thresholding"""
@@ -180,8 +184,10 @@ class EmotionRecognizer:
         """Сброс истории"""
         self.history.clear()
 
+
 class DetectFaceAndRecognizeEmotion:
     """Детектирует лица и распознаёт эмоции"""
+
     def __init__(self, face_detector: FaceDetector, emotion_recognizer: EmotionRecognizer):
         self.face_detector = face_detector
         self.emotion_recognizer = emotion_recognizer
@@ -193,7 +199,7 @@ class DetectFaceAndRecognizeEmotion:
         :return: Возвращает изображение с bbox'ами, эмоции и уверенности в эмоциях.
         Формат: (image, [(emotion, confidence), ...])
         """
-        vis_image = image.copy() # создание копии для отрисовки на ней bbox'ов
+        vis_image = image.copy()  # создание копии для отрисовки на ней bbox'ов
         faces = self.face_detector.detect(image)
         emotions = []
         for face in faces:
@@ -203,43 +209,62 @@ class DetectFaceAndRecognizeEmotion:
 
             cv2.rectangle(vis_image, (x1, y1), (x2, y2), (255, 0, 255), 2)
             text = f"{emotion}: {conf:.2f}"
-            cv2.putText(vis_image, text, (x1, y1-10),
+            cv2.putText(vis_image, text, (x1, y1 - 10),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 255), 2)
 
         return vis_image, emotions
 
 
+class CaptureReadError(Exception): pass
+
+
+def process_video_stream(video_stream: cv2.VideoCapture,
+                         face_detector_and_emotion_recognizer: typing.Optional[DetectFaceAndRecognizeEmotion] = None, *,
+                         flip_h: bool = False):
+    if face_detector_and_emotion_recognizer is None:
+        face_detector = FaceDetector(min_detection_confidence=0.5)
+        emotion_recognizer = EmotionRecognizer(
+            device='cuda' if torch.cuda.is_available() else 'cpu',
+            window_size=15,
+            alpha=0.3,
+            confidence_threshold=0.55,
+            ambiguity_threshold=0.15
+        )
+        face_detector_and_emotion_recognizer = DetectFaceAndRecognizeEmotion(face_detector, emotion_recognizer)
+
+    if not video_stream.isOpened():
+        raise CaptureReadError('"video_stream" is not opened')
+    while True:
+        ret_val, img = video_stream.read()
+        if not ret_val:
+            raise CaptureReadError('Failed to get image from "video_stream"')
+        if flip_h:
+            img = cv2.flip(img, 1)
+        new_img, emotions = face_detector_and_emotion_recognizer.detect_and_recognize(img)
+        yield new_img, emotions
+
+
 if __name__ == '__main__':
     from time import time
     from queue import Queue
-    import torch
-
-    face_detector = FaceDetector(min_detection_confidence=0.5)
-    emotion_recognizer= EmotionRecognizer(
-        device='cuda' if torch.cuda.is_available() else 'cpu',
-        window_size=15,
-        alpha=0.3,
-        confidence_threshold=0.55,
-        ambiguity_threshold=0.15
-    )
-    face_detector_and_emotion_recognizer = DetectFaceAndRecognizeEmotion(face_detector, emotion_recognizer)
 
     cap = cv2.VideoCapture(0)
     fps_history = Queue()
-    FPS_HiSTORY_LEN = 3 # для более гладкого fps, будет выводится средние из последних FPS_HiSTORY_LEN измерений
-    for _ in range(FPS_HiSTORY_LEN):
+    FPS_HISTORY_LEN = 3  # для более гладкого fps, будет выводится средние из последних FPS_HISTORY_LEN измерений
+    for _ in range(FPS_HISTORY_LEN):
         fps_history.put(0.0)
-    while True:
+    try:
         start_time = time()
-        ret_val, img = cap.read()
-        img = cv2.flip(img, 1)
-        new_img, emotions = face_detector_and_emotion_recognizer.detect_and_recognize(img)
-        cv2.putText(new_img, f'FPS: {round(sum(fps_history.queue)/FPS_HiSTORY_LEN)}', (5, 20),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 255), 2)
-        cv2.imshow('Test', new_img)
-        if cv2.waitKey(1) == 27:
-            break  # esc to quit
-        fps = 1/(time() - start_time)
-        fps_history.put(fps)
-        fps_history.get()
-    cv2.destroyAllWindows()
+        for img, emotions in process_video_stream(cap, flip_h=True):
+            cv2.putText(img, f'FPS: {round(sum(fps_history.queue) / FPS_HISTORY_LEN)}', (5, 20),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 255), 2)
+            cv2.imshow('Test', img)
+            if cv2.waitKey(1) == 27:
+                break  # esc to quit
+            fps = 1 / (time() - start_time)
+            fps_history.put(fps)
+            fps_history.get()
+            start_time = time()
+    finally:
+        cap.release()
+        cv2.destroyAllWindows()
