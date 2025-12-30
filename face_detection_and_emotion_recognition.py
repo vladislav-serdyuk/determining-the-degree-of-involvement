@@ -28,14 +28,8 @@ class FaceDetector:
         :param min_detection_confidence: Минимальный уровень уверенности модели, чтобы считать, что лицо есть
         :param margin: Добавочный отступ к bbox, предсказанный моделью
         """
-        if type(margin) is not int:
-            raise TypeError(f'Type of "margin" should be int, got {type(margin)}')
-        if margin < 0:
-            raise ValueError(f'"margin" should be >= 0')
-        if type(min_detection_confidence) is not float:
-            raise TypeError(f'Type of "min_detection_confidence" should be float, got {type(min_detection_confidence)}')
-        if min_detection_confidence < 0 or min_detection_confidence > 1:
-            raise ValueError(f'"min_detection_confidence" should be in [0:1]')
+        self._validate_margin(margin)
+        self._validate_confidence(min_detection_confidence)
 
         self.detector = mp_face_detection.FaceDetection(
             model_selection=1,  # 1 = full-range model (до 5 метров)
@@ -43,18 +37,28 @@ class FaceDetector:
         )
         self.margin = margin
 
-    def set_margin(self, margin: int):
-        if type(margin) is not int:
-            raise TypeError(f'Type of "margin" should be int, got {type(margin)}')
+    @staticmethod
+    def _validate_margin(margin: int) -> None:
+        """Валидация margin"""
+        if not isinstance(margin, int):
+            raise TypeError(f'Type of "margin" should be int, got {type(margin).__name__}')
         if margin < 0:
-            raise ValueError(f'"margin" should be >= 0')
+            raise ValueError('"margin" should be >= 0')
+
+    def set_margin(self, margin: int):
+        self._validate_margin(margin)
         self.margin = margin
 
+    @staticmethod
+    def _validate_confidence(confidence: float) -> None:
+        """Валидация min_detection_confidence"""
+        if not isinstance(confidence, (float, int)):
+            raise TypeError(f'Type of confidence should be float, got {type(confidence).__name__}')
+        if not 0 <= confidence <= 1:
+            raise ValueError(f'Confidence should be in [0, 1], got {confidence}')
+
     def set_min_detection_confidence(self, min_detection_confidence: float):
-        if type(min_detection_confidence) is not float:
-            raise TypeError(f'Type of "min_detection_confidence" should be float, got {type(min_detection_confidence)}')
-        if min_detection_confidence < 0 or min_detection_confidence > 1:
-            raise ValueError(f'"min_detection_confidence" should be in [0:1]')
+        self._validate_confidence(min_detection_confidence)
         self.detector = mp_face_detection.FaceDetection(
             model_selection=1,  # 1 = full-range model (до 5 метров)
             min_detection_confidence=min_detection_confidence
@@ -112,32 +116,23 @@ class EmotionRecognizer:
                  model_name='enet_b2_8'):
         """
         Args:
-            device: 'cpu' или 'cuda'
+            device: 'cpu' или 'cuda'. Не меняется после инициализации
             window_size: Размер окна для сглаживания
             confidence_threshold: Минимальный порог уверенности
             ambiguity_threshold: Порог для амбивалентных эмоций
             model_name: Имя модели
         """
-        if type(device) is not str:
-            raise TypeError(f'Type of "window_size" should be str, got {type(window_size)}')
+        if not isinstance(device, str):
+            raise TypeError(f'Type of "device" should be str, got {type(device)}')
         if device not in ['cpu', 'cuda']:
             raise ValueError(f'"device" should be "cpu" or "cuda". Got "{device}"')
-        if type(window_size) is not int:
-            raise TypeError(f'Type of "window_size" should be int, got {type(window_size)}')
-        if window_size < 0:
-            raise ValueError(f'"window_size" should be >= 0')
-        if type(confidence_threshold) is not float:
-            raise TypeError(f'Type of "confidence_threshold" should be float, got {type(confidence_threshold)}')
-        if confidence_threshold < 0 or confidence_threshold > 1:
-            raise ValueError(f'"confidence_threshold" should be in [0;1]')
-        if type(ambiguity_threshold) is not float:
-            raise TypeError(f'Type of "ambiguity_threshold" should be float, got {type(ambiguity_threshold)}')
-        if ambiguity_threshold < 0 or ambiguity_threshold > 1:
-            raise ValueError(f'"ambiguity_threshold" should be in [0;1]')
+        self._validate_window_size(window_size)
+        self._validate_confidence_threshold(confidence_threshold)
+        self._validate_ambiguity_threshold(ambiguity_threshold)
         if type(model_name) is not str:
             raise TypeError(f'Type of "model_name" should be str, got {type(model_name)}')
         if model_name not in get_model_list():
-            raise ValueError(f'Unknow "model_name". Got "{model_name}". Available models: {get_model_list()}')
+            raise ValueError(f'Unknown "model_name". Got "{model_name}". Available models: {get_model_list()}')
 
         self.recognizer = EmotiEffLibRecognizer(
             model_name=model_name,
@@ -154,25 +149,37 @@ class EmotionRecognizer:
         self.ambiguity_threshold = ambiguity_threshold
         print(f"EmotiEffLib + Advanced загружен: модель={model_name}, устройство={device}")
 
-    def set_window_size(self, window_size: int):
-        if type(window_size) is not int:
+    @staticmethod
+    def _validate_window_size(window_size: int):
+        if not isinstance(window_size, int):
             raise TypeError(f'Type of "window_size" should be int, got {type(window_size)}')
         if window_size < 0:
             raise ValueError(f'"window_size" should be >= 0')
+
+    def set_window_size(self, window_size: int):
+        self._validate_window_size(window_size)
         self.history = deque(maxlen=window_size)
 
-    def set_confidence_threshold(self, confidence_threshold: float):
-        if type(confidence_threshold) is not float:
+    @staticmethod
+    def _validate_confidence_threshold(confidence_threshold: float):
+        if not isinstance(confidence_threshold, (float, int)):
             raise TypeError(f'Type of "confidence_threshold" should be float, got {type(confidence_threshold)}')
         if confidence_threshold < 0 or confidence_threshold > 1:
             raise ValueError(f'"confidence_threshold" should be in [0;1]')
+
+    def set_confidence_threshold(self, confidence_threshold: float):
+        self._validate_confidence_threshold(confidence_threshold)
         self.confidence_threshold = confidence_threshold
 
-    def set_ambiguity_threshold(self, ambiguity_threshold: float):
-        if type(ambiguity_threshold) is not float:
+    @staticmethod
+    def _validate_ambiguity_threshold(ambiguity_threshold: float):
+        if not isinstance(ambiguity_threshold, (float, int)):
             raise TypeError(f'Type of "ambiguity_threshold" should be float, got {type(ambiguity_threshold)}')
         if ambiguity_threshold < 0 or ambiguity_threshold > 1:
             raise ValueError(f'"ambiguity_threshold" should be in [0;1]')
+
+    def set_ambiguity_threshold(self, ambiguity_threshold: float):
+        self._validate_ambiguity_threshold(ambiguity_threshold)
         self.ambiguity_threshold = ambiguity_threshold
 
     def predict(self, face_crop: cv2.typing.MatLike) -> tuple[str, float]:
