@@ -107,35 +107,73 @@ class FaceDetector:
 class EmotionRecognizer:
     """Распознавание с temporal smoothing + confidence thresholding"""
 
-    def __init__(self, *, device='cpu', window_size=15, alpha=0.3,
+    def __init__(self, *, device: typing.Literal['cpu', 'cuda'] = 'cpu', window_size=15,
                  confidence_threshold=0.55, ambiguity_threshold=0.15,
-                 model_name='enet_b2_8_best'):
+                 model_name='enet_b2_8'):
         """
         Args:
             device: 'cpu' или 'cuda'
             window_size: Размер окна для сглаживания
-            alpha: Коэффициент для EMA
             confidence_threshold: Минимальный порог уверенности
             ambiguity_threshold: Порог для амбивалентных эмоций
             model_name: Имя модели
         """
+        if type(device) is not str:
+            raise TypeError(f'Type of "window_size" should be str, got {type(window_size)}')
+        if device not in ['cpu', 'cuda']:
+            raise ValueError(f'"device" should be "cpu" or "cuda". Got "{device}"')
+        if type(window_size) is not int:
+            raise TypeError(f'Type of "window_size" should be int, got {type(window_size)}')
+        if window_size < 0:
+            raise ValueError(f'"window_size" should be >= 0')
+        if type(confidence_threshold) is not float:
+            raise TypeError(f'Type of "confidence_threshold" should be float, got {type(confidence_threshold)}')
+        if confidence_threshold < 0 or confidence_threshold > 1:
+            raise ValueError(f'"confidence_threshold" should be in [0;1]')
+        if type(ambiguity_threshold) is not float:
+            raise TypeError(f'Type of "ambiguity_threshold" should be float, got {type(ambiguity_threshold)}')
+        if ambiguity_threshold < 0 or ambiguity_threshold > 1:
+            raise ValueError(f'"ambiguity_threshold" should be in [0;1]')
+        if type(model_name) is not str:
+            raise TypeError(f'Type of "model_name" should be str, got {type(model_name)}')
+        if model_name not in get_model_list():
+            raise ValueError(f'Unknow "model_name". Got "{model_name}". Available models: {get_model_list()}')
+
         self.recognizer = EmotiEffLibRecognizer(
-            model_name=get_model_list()[2],
+            model_name=model_name,
             device=device
         )
         self.emotion_labels = ['Angry', 'Disgust', 'Fear', 'Happy',
                                'Sad', 'Surprise', 'Neutral', 'Contempt']
 
         # Параметры сглаживания
-        self.window_size = window_size
-        self.alpha = alpha
         self.history = deque(maxlen=window_size)
 
         # Параметры фильтрации
         self.confidence_threshold = confidence_threshold
         self.ambiguity_threshold = ambiguity_threshold
-        self.name = f"EmotiEffLib + Advanced ({model_name})"
         print(f"EmotiEffLib + Advanced загружен: модель={model_name}, устройство={device}")
+
+    def set_window_size(self, window_size: int):
+        if type(window_size) is not int:
+            raise TypeError(f'Type of "window_size" should be int, got {type(window_size)}')
+        if window_size < 0:
+            raise ValueError(f'"window_size" should be >= 0')
+        self.history = deque(maxlen=window_size)
+
+    def set_confidence_threshold(self, confidence_threshold: float):
+        if type(confidence_threshold) is not float:
+            raise TypeError(f'Type of "confidence_threshold" should be float, got {type(confidence_threshold)}')
+        if confidence_threshold < 0 or confidence_threshold > 1:
+            raise ValueError(f'"confidence_threshold" should be in [0;1]')
+        self.confidence_threshold = confidence_threshold
+
+    def set_ambiguity_threshold(self, ambiguity_threshold: float):
+        if type(ambiguity_threshold) is not float:
+            raise TypeError(f'Type of "ambiguity_threshold" should be float, got {type(ambiguity_threshold)}')
+        if ambiguity_threshold < 0 or ambiguity_threshold > 1:
+            raise ValueError(f'"ambiguity_threshold" should be in [0;1]')
+        self.ambiguity_threshold = ambiguity_threshold
 
     def predict(self, face_crop: cv2.typing.MatLike) -> tuple[str, float]:
         """Предсказывает эмоцию с продвинутой фильтрацией"""
@@ -265,13 +303,8 @@ def process_video_stream(video_stream: cv2.VideoCapture,
     use_inner_models = face_detector_and_emotion_recognizer is None
     if use_inner_models:
         face_detector = FaceDetector(min_detection_confidence=0.5)
-        emotion_recognizer = EmotionRecognizer(
-            device='cuda' if torch.cuda.is_available() else 'cpu',
-            window_size=15,
-            alpha=0.3,
-            confidence_threshold=0.55,
-            ambiguity_threshold=0.15
-        )
+        emotion_recognizer = EmotionRecognizer(device='cuda' if torch.cuda.is_available() else 'cpu', window_size=15,
+                                               confidence_threshold=0.55, ambiguity_threshold=0.15)
         face_detector_and_emotion_recognizer = DetectFaceAndRecognizeEmotion(face_detector, emotion_recognizer)
 
     if not video_stream.isOpened():
