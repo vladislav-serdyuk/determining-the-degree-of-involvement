@@ -958,7 +958,7 @@ def create_webcam_section():
                         img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
                         # Отображаем кадр
-                        webcam_placeholder.image(img_rgb, channels="RGB", use_column_width=True)
+                        webcam_placeholder.image(img_rgb, channels="RGB", use_container_width=True)
 
                         # Отображаем текущие эмоции
                         if emotions:
