@@ -1,0 +1,73 @@
+/* Основные стили */
+/* Вынесены из emotion_detection_app.py */
+
+.main-header {
+    font-size: 2.8rem;
+    text-align: center;
+    margin-bottom: 1rem;
+    font-weight: 800;
+    padding: 0.5rem;
+}
+
+.webcam-container {
+    border: 3px solid #667eea;
+    border-radius: 15px;
+    padding: 1rem;
+    background: linear-gradient(135deg, #667eea0a 0%, #764ba20a 100%);
+    margin: 2rem 0;
+}
+
+.processing-card {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    border-radius: 15px;
+    padding: 2rem;
+    margin: 2rem 0;
+    box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+}
+
+.result-card {
+    background: linear-gradient(135deg, #56ab2f, #a8e063);
+    color: white;
+    border-radius: 15px;
+    padding: 2rem;
+    margin: 2rem 0;
+    box-shadow: 0 10px 30px rgba(86, 171, 47, 0.3);
+}
+
+.error-card {
+    background: linear-gradient(135deg, #ff416c, #ff4b2b);
+    color: white;
+    border-radius: 15px;
+    padding: 2rem;
+    margin: 2rem 0;
+    box-shadow: 0 10px 30px rgba(255, 65, 108, 0.3);
+}
+
+.video-container {
+    border-radius: 15px;
+    overflow: hidden;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+    background: #000;
+}
+
+.emotion-display {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.emotion-item {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    padding: 8px 15px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.emotion-confidence {
+    font-size: 0.8rem;
+    opacity: 0.9;
+}

@@ -31,11 +31,10 @@ except ImportError as e:
     st.error(f"Не удалось импортировать модуль бэкенда: {e}")
     BACKEND_AVAILABLE = False
 
-APP_TITLE = "Real-time Emotion Detection"
+APP_TITLE = "Распознавание эмоций в реальном времени"
 APP_ICON = "🎭"
 SUPPORTED_FORMATS = ['mp4', 'avi', 'mov', 'mkv', 'webm', 'wmv']
 MAX_FILE_SIZE = 100 * 1024 * 1024  # 100MB
-
 
 # ============================================
 # CSS СТИЛИ
@@ -48,81 +47,17 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-st.markdown("""
-<style>
-    /* Основные стили */
-    .main-header {
-        font-size: 2.8rem;
-        text-align: center;
-        margin-bottom: 1rem;
-        font-weight: 800;
-        padding: 0.5rem;
-    }
+# Загрузка внешних CSS стилей
+def load_css():
+    """Загружает внешний CSS файл"""
+    css_file = Path(__file__).parent / "styles.css"
+    if css_file.exists():
+        with open(css_file, encoding='utf-8') as f:
+            st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
+    else:
+        st.warning("Файл стилей styles.css не найден")
 
-    .webcam-container {
-        border: 3px solid #667eea;
-        border-radius: 15px;
-        padding: 1rem;
-        background: linear-gradient(135deg, #667eea0a 0%, #764ba20a 100%);
-        margin: 2rem 0;
-    }
-
-    .processing-card {
-        background: linear-gradient(135deg, #667eea, #764ba2);
-        color: white;
-        border-radius: 15px;
-        padding: 2rem;
-        margin: 2rem 0;
-        box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
-    }
-
-    .result-card {
-        background: linear-gradient(135deg, #56ab2f, #a8e063);
-        color: white;
-        border-radius: 15px;
-        padding: 2rem;
-        margin: 2rem 0;
-        box-shadow: 0 10px 30px rgba(86, 171, 47, 0.3);
-    }
-
-    .error-card {
-        background: linear-gradient(135deg, #ff416c, #ff4b2b);
-        color: white;
-        border-radius: 15px;
-        padding: 2rem;
-        margin: 2rem 0;
-        box-shadow: 0 10px 30px rgba(255, 65, 108, 0.3);
-    }
-
-    .video-container {
-        border-radius: 15px;
-        overflow: hidden;
-        box-shadow: 0 15px 35px rgba(0,0,0,0.1);
-        background: #000;
-    }
-
-    .emotion-display {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
-        margin-top: 15px;
-    }
-
-    .emotion-item {
-        background: linear-gradient(135deg, #667eea, #764ba2);
-        color: white;
-        padding: 8px 15px;
-        border-radius: 20px;
-        font-size: 0.9rem;
-        font-weight: 500;
-    }
-
-    .emotion-confidence {
-        font-size: 0.8rem;
-        opacity: 0.9;
-    }
-</style>
-""", unsafe_allow_html=True)
+load_css()
 
 
 # ============================================
@@ -447,33 +382,33 @@ def display_header():
     with col2:
         st.markdown(f'<h1 class="main-header">{APP_TITLE}</h1>', unsafe_allow_html=True)
         st.markdown(
-            '<p style="text-align: center; color: #666; font-size: 1.2rem; margin-bottom: 2rem;">Upload a video or use webcam to detect faces and recognize emotions in real-time</p>',
+            '<p style="text-align: center; color: #666; font-size: 1.2rem; margin-bottom: 2rem;">Загрузите видео или используйте веб-камеру для детекции лиц и распознавания эмоций в реальном времени</p>',
             unsafe_allow_html=True)
 
 
 def display_sidebar():
     """Отображает боковую панель с настройками"""
     with st.sidebar:
-        st.markdown("### 🎭 Emotion Detection")
+        st.markdown("### 🎭 Распознавание эмоций")
 
         # Информация о системе
-        st.markdown("#### ℹ️ System Status")
+        st.markdown("#### ℹ️ Состояние системы")
 
         if BACKEND_AVAILABLE:
-            st.success("✅ Backend module available")
+            st.success("✅ Модуль бэкенда доступен")
         else:
-            st.error("❌ Backend module not found")
-            st.info("Please ensure face_detection_and_emotion_recognition.py is in the current directory")
+            st.error("❌ Модуль бэкенда не найден")
+            st.info("Убедитесь, что файл face_detection_and_emotion_recognition.py находится в текущей директории")
 
         st.markdown("---")
 
         # Настройки параметров
-        st.markdown("#### ⚙️ Processing Parameters")
+        st.markdown("#### ⚙️ Параметры обработки")
 
         # Face Detector Parameters
-        st.markdown("##### Face Detection")
+        st.markdown("##### Детекция лиц")
         st.session_state.backend_params['min_detection_confidence'] = st.slider(
-            "Min Detection Confidence",
+            "Минимальная уверенность детекции",
             min_value=0.0,
             max_value=1.0,
             value=st.session_state.backend_params['min_detection_confidence'],
@@ -482,10 +417,10 @@ def display_sidebar():
         )
 
         # Emotion Recognizer Parameters
-        st.markdown("##### Emotion Recognition")
+        st.markdown("##### Распознавание эмоций")
 
         st.session_state.backend_params['window_size'] = st.slider(
-            "Window Size",
+            "Размер окна",
             min_value=3,
             max_value=30,
             value=st.session_state.backend_params['window_size'],
@@ -494,7 +429,7 @@ def display_sidebar():
         )
 
         st.session_state.backend_params['confidence_threshold'] = st.slider(
-            "Confidence Threshold",
+            "Порог уверенности",
             min_value=0.0,
             max_value=1.0,
             value=st.session_state.backend_params['confidence_threshold'],
@@ -503,7 +438,7 @@ def display_sidebar():
         )
 
         st.session_state.backend_params['ambiguity_threshold'] = st.slider(
-            "Ambiguity Threshold",
+            "Порог амбивалентности",
             min_value=0.0,
             max_value=1.0,
             value=st.session_state.backend_params['ambiguity_threshold'],
@@ -512,15 +447,15 @@ def display_sidebar():
         )
 
         # Общие параметры
-        st.markdown("##### General Settings")
+        st.markdown("##### Общие настройки")
         st.session_state.backend_params['flip_h'] = st.checkbox(
-            "Flip Horizontal",
+            "Отразить по горизонтали",
             value=st.session_state.backend_params['flip_h'],
             help="Отзеркаливание по горизонтали"
         )
 
         st.session_state.backend_params['show_preview'] = st.checkbox(
-            "Show Preview",
+            "Показывать превью",
             value=st.session_state.backend_params['show_preview'],
             help="Показывать превью во время обработки"
         )
@@ -528,7 +463,7 @@ def display_sidebar():
         st.markdown("---")
 
         # Кнопка сброса параметров
-        if st.button("🔄 Reset to Default", use_container_width=True):
+        if st.button("🔄 Сбросить по умолчанию", use_container_width=True):
             st.session_state.backend_params = {
                 'min_detection_confidence': 0.5,
                 'window_size': 15,
@@ -542,20 +477,20 @@ def display_sidebar():
 
 def create_upload_section():
     """Создает секцию загрузки файла"""
-    st.markdown("### 📤 Upload Video")
+    st.markdown("### 📤 Загрузка видео")
 
     # Зона загрузки
     uploaded_file = st.file_uploader(
-        "Choose a video file",
+        "Выберите видеофайл",
         type=SUPPORTED_FORMATS,
-        help=f"Supported formats: {', '.join(SUPPORTED_FORMATS).upper()}",
+        help=f"Поддерживаемые форматы: {', '.join(SUPPORTED_FORMATS).upper()}",
         label_visibility="collapsed"
     )
 
     if uploaded_file is not None:
         # Проверяем размер файла
         if uploaded_file.size > MAX_FILE_SIZE:
-            st.error(f"File too large! Maximum size is {MAX_FILE_SIZE // (1024 * 1024)}MB")
+            st.error(f"Файл слишком большой! Максимальный размер: {MAX_FILE_SIZE // (1024 * 1024)}МБ")
             return
 
         # Сохраняем временный файл
@@ -581,38 +516,39 @@ def create_upload_section():
             # Кнопка обработки
             col1, col2 = st.columns(2)
             with col1:
-                if st.button("🚀 Start Emotion Detection", type="primary", use_container_width=True):
+                if st.button("🚀 Начать распознавание эмоций", type="primary", use_container_width=True):
                     if not BACKEND_AVAILABLE:
                         st.error("Невозможно начать обработку: Backend модуль недоступен. Убедитесь, что файл face_detection_and_emotion_recognition.py находится в текущей директории со всеми необходимыми зависимостями.")
                     else:
                         st.session_state.processing_status = "starting"
                         st.rerun()
             with col2:
-                if st.button("🗑️ Clear File", use_container_width=True):
+                if st.button("🗑️ Очистить файл", use_container_width=True):
                     st.session_state.uploaded_file_path = None
                     st.rerun()
         else:
-            st.error(f"Error: {video_info['error']}")
+            st.error(f"Ошибка: {video_info['error']}")
 
     else:
         # Показываем подсказку
-        st.info("Загрузите видеофайл, используя загрузчик выше.")
+        st.info("Загрузите видеофайл, для этого выберите его через **Browse Files** или переместите в область выше.")
         st.markdown("""
         **Поддерживаемые форматы:** MP4, AVI, MOV, MKV, WebM, WMV
+                    
         **Максимальный размер:** 100MB
         """)
 
 
 def display_file_info(uploaded_file, video_info):
     """Отображает информацию о файле"""
-    st.markdown("### 📊 Video Information")
+    st.markdown("### 📊 Информация о видео")
 
-    # Нативные Streamlit metrics для информации о видеофайле
+    # Статистика в карточках
     col1, col2, col3, col4 = st.columns(4)
 
     with col1:
         st.metric(
-            label="Resolution",
+            label="Разрешение",
             value=f"{video_info['width']}×{video_info['height']}"
         )
 
@@ -623,30 +559,30 @@ def display_file_info(uploaded_file, video_info):
             seconds = int(duration % 60)
             duration_str = f"{minutes}:{seconds:02d}"
         else:
-            duration_str = f"{duration:.1f}s"
+            duration_str = f"{duration:.1f}с"
 
         st.metric(
-            label="Duration",
+            label="Длительность",
             value=duration_str
         )
 
     with col3:
-        st.metric(
-            label="FPS",
-            value=video_info["fps"]
-        )
+        st.markdown('<div class="stat-card">', unsafe_allow_html=True)
+        st.markdown(f'<div class="stat-value">{video_info["fps"]}</div>', unsafe_allow_html=True)
+        st.markdown('<div class="stat-label">FPS</div>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
 
     with col4:
         file_size_mb = uploaded_file.size / (1024 * 1024)
         st.metric(
-            label="Size (MB)",
+            label="Размер (МБ)",
             value=f"{file_size_mb:.1f}"
         )
 
 
 def display_video_preview(video_path, video_info):
     """Отображает превью видео"""
-    st.markdown("### 👀 Video Preview")
+    st.markdown("### 👀 Превью видео")
 
     # Основное видео
     st.markdown('<div class="video-container">', unsafe_allow_html=True)
@@ -655,7 +591,7 @@ def display_video_preview(video_path, video_info):
     st.markdown('</div>', unsafe_allow_html=True)
 
     # Примеры кадров
-    st.markdown("#### 📸 Sample Frames")
+    st.markdown("#### 📸 Примеры кадров")
 
     frames = st.session_state.video_processor.extract_sample_frames(video_path, 4)
     if frames:
@@ -663,7 +599,7 @@ def display_video_preview(video_path, video_info):
         for idx, (col, frame) in enumerate(zip(cols, frames)):
             with col:
                 img = Image.fromarray(frame)
-                st.image(img, caption=f"Frame {idx + 1}", use_container_width=True)
+                st.image(img, caption=f"Кадр {idx + 1}", use_container_width=True)
 
 
 def process_video():
@@ -673,7 +609,7 @@ def process_video():
 
         # Показываем панель прогресса
         st.markdown('<div class="processing-card">', unsafe_allow_html=True)
-        st.markdown("### ⚙️ Processing Your Video")
+        st.markdown("### ⚙️ Обработка вашего видео")
 
         progress_bar = st.progress(0)
         status_text = st.empty()
@@ -727,20 +663,20 @@ def process_video():
 def display_result():
     """Отображает результат обработки"""
     st.markdown('<div class="result-card">', unsafe_allow_html=True)
-    st.markdown("### ✅ Processing Completed!")
+    st.markdown("### ✅ Обработка завершена!")
 
     result_path = st.session_state.result_path
 
     if result_path and os.path.exists(result_path):
         # Показываем обработанное видео
-        st.markdown("#### 🎬 Processed Video")
+        st.markdown("#### 🎬 Обработанное видео")
         st.markdown('<div class="video-container">', unsafe_allow_html=True)
         st.video(result_path)
         st.markdown('</div>', unsafe_allow_html=True)
 
         # статистика эмоций
         if st.session_state.emotion_statistics:
-            st.markdown("#### 📊 Emotion Statistics")
+            st.markdown("#### 📊 Статистика эмоций")
 
             # Фильтруем только эмоции (исключаем технические поля)
             emotion_stats = {k: v for k, v in st.session_state.emotion_statistics.items()
@@ -756,19 +692,19 @@ def display_result():
                         st.metric(emotion.capitalize(), f"{count} ({percent:.1f}%)")
 
             # Общая статистика
-            st.markdown("#### 📈 Overall Statistics")
+            st.markdown("#### 📈 Общая статистика")
             col1, col2, col3 = st.columns(3)
             with col1:
-                st.metric("Total Frames", st.session_state.emotion_statistics.get('total_frames', 0))
+                st.metric("Всего кадров", st.session_state.emotion_statistics.get('total_frames', 0))
             with col2:
-                st.metric("Face Detections", st.session_state.emotion_statistics.get('total_detections', 0))
+                st.metric("Детекций лиц", st.session_state.emotion_statistics.get('total_detections', 0))
             with col3:
-                st.metric("Detection Rate", f"{st.session_state.emotion_statistics.get('detection_rate', 0):.1f}%")
+                st.metric("Процент детекции", f"{st.session_state.emotion_statistics.get('detection_rate', 0):.1f}%")
 
         # Кнопка скачивания
         with open(result_path, "rb") as f:
             st.download_button(
-                label="📥 Download Processed Video",
+                label="📥 Скачать обработанное видео",
                 data=f,
                 file_name=os.path.basename(result_path),
                 mime="video/mp4",
@@ -777,12 +713,12 @@ def display_result():
             )
 
     else:
-        st.warning("Processed video file not found")
+        st.warning("Файл обработанного видео не найден")
 
     # Кнопка для новой обработки
     col1, col2 = st.columns(2)
     with col1:
-        if st.button("🔄 Process Another Video", use_container_width=True):
+        if st.button("🔄 Обработать другое видео", use_container_width=True):
             st.session_state.uploaded_file_path = None
             st.session_state.processing_status = "idle"
             st.session_state.result_path = None
@@ -795,22 +731,22 @@ def display_result():
 def display_error():
     """Отображает ошибку обработки"""
     st.markdown('<div class="error-card">', unsafe_allow_html=True)
-    st.markdown("### ❌ Processing Failed")
+    st.markdown("### ❌ Обработка не удалась")
 
-    error_msg = getattr(st.session_state, 'error_message', 'Unknown error')
-    st.error(f"Error: {error_msg}")
+    error_msg = getattr(st.session_state, 'error_message', 'Неизвестная ошибка')
+    st.error(f"Ошибка: {error_msg}")
 
     # Советы по устранению неполадок
-    st.markdown("#### 🔧 Troubleshooting Tips:")
+    st.markdown("#### 🔧 Советы по устранению неполадок:")
     st.markdown("""
-    1. ✅ Ensure `face_detection_and_emotion_recognition.py` is in the same directory
-    2. ✅ Check if all dependencies are installed
-    3. ✅ Try a shorter video (under 1 minute)
-    4. ✅ Ensure the video format is supported
-    5. ✅ Check available disk space
+    1. ✅ Убедитесь, что файл `face_detection_and_emotion_recognition.py` находится в той же директории
+    2. ✅ Проверьте, что все зависимости установлены
+    3. ✅ Попробуйте использовать более короткое видео (менее 1 минуты)
+    4. ✅ Убедитесь, что формат видео поддерживается
+    5. ✅ Проверьте наличие свободного места на диске
     """)
 
-    if st.button("🔄 Try Again", use_container_width=True):
+    if st.button("🔄 Попробовать снова", use_container_width=True):
         st.session_state.processing_status = "idle"
         st.rerun()
 
@@ -819,11 +755,11 @@ def display_error():
 
 def create_webcam_section():
     """Создает секцию работы с веб-камерой"""
-    st.markdown("### 📷 Webcam Live Emotion Detection")
+    st.markdown("### 📷 Распознавание эмоций через веб-камеру")
 
     if not BACKEND_AVAILABLE:
         st.warning(
-            "Webcam emotion detection requires backend module. Please ensure face_detection_and_emotion_recognition.py is available.")
+            "Распознавание эмоций через веб-камеру требует модуль бэкенда. Убедитесь, что файл face_detection_and_emotion_recognition.py доступен.")
         return
 
     col1, col2 = st.columns([3, 1])
@@ -833,10 +769,10 @@ def create_webcam_section():
         control_col1, control_col2 = st.columns(2)
 
         with control_col1:
-            start_webcam = st.button("🎬 Start Webcam", type="primary", use_container_width=True)
+            start_webcam = st.button("🎬 Запустить веб-камеру", type="primary", use_container_width=True)
 
         with control_col2:
-            stop_webcam = st.button("⏹️ Stop Webcam", type="secondary", use_container_width=True)
+            stop_webcam = st.button("⏹️ Остановить веб-камеру", type="secondary", use_container_width=True)
 
         # Место для отображения видео
         webcam_placeholder = st.empty()
@@ -858,7 +794,7 @@ def create_webcam_section():
             cap = cv2.VideoCapture(0)
 
             if not cap.isOpened():
-                st.error("Cannot open webcam")
+                st.error("Не удалось открыть веб-камеру")
                 st.session_state.webcam_running = False
             else:
                 # Настройки камеры
@@ -900,13 +836,13 @@ def create_webcam_section():
                         img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
                         # Отображаем кадр
-                        webcam_placeholder.image(img_rgb, channels="RGB", use_container_width=True)
+                        webcam_placeholder.image(img_rgb, channels="RGB", use_column_width=True)
 
                         # Отображаем текущие эмоции
                         if emotions:
-                            emotion_text = "**Detected Emotions:**\n"
+                            emotion_text = "**Обнаруженные эмоции:**\n"
                             for i, (emotion, confidence) in enumerate(emotions):
-                                emotion_text += f"Face {i + 1}: {emotion} ({confidence:.2f})\n"
+                                emotion_text += f"Лицо {i + 1}: {emotion} ({confidence:.2f})\n"
                             emotions_placeholder.markdown(emotion_text)
 
                         # Обновляем статистику
@@ -917,20 +853,20 @@ def create_webcam_section():
                                 stats[emotion] = stats.get(emotion, 0) + 1
 
                             # Отображение статистики
-                            stats_text = "**Recent Emotion Statistics:**\n"
+                            stats_text = "**Статистика эмоций:**\n"
                             for emotion, count in stats.items():
                                 percent = (count / len(emotion_history)) * 100
                                 stats_text += f"{emotion}: {percent:.1f}%\n"
 
                             stats_placeholder.markdown(stats_text)
 
-                        fps_placeholder.metric("Current FPS", avg_fps)
+                        fps_placeholder.metric("Текущий FPS", avg_fps)
                         start_time = current_time()
 
                 except CaptureReadError as e:
-                    st.error(f"Webcam error: {e}")
+                    st.error(f"Ошибка веб-камеры: {e}")
                 except Exception as e:
-                    st.error(f"Error in webcam processing: {e}")
+                    st.error(f"Ошибка обработки веб-камеры: {e}")
                 finally:
                     cap.release()
                     webcam_placeholder.empty()
@@ -940,17 +876,17 @@ def create_webcam_section():
 
     with col2:
         # Статус и информация
-        st.markdown("#### 🔴 Live Status")
+        st.markdown("#### 🔴 Статус")
         if st.session_state.get('webcam_running', False):
-            st.success("✅ Webcam Active")
-            st.info("Detecting faces and emotions in real-time")
+            st.success("✅ Веб-камера активна")
+            st.info("Детекция лиц и эмоций в реальном времени")
         else:
-            st.info("📷 Webcam Ready")
+            st.info("📷 Веб-камера готова")
 
         st.markdown("---")
 
         # Текущие параметры
-        st.markdown("#### ⚙️ Current Parameters")
+        st.markdown("#### ⚙️ Текущие параметры")
         for key, value in st.session_state.backend_params.items():
             if key not in ['flip_h', 'show_preview']:
                 st.metric(key.replace('_', ' ').title(), f"{value:.2f}" if isinstance(value, float) else value)
@@ -958,13 +894,13 @@ def create_webcam_section():
         st.markdown("---")
 
         # Инструкции
-        st.markdown("#### 📝 Instructions")
+        st.markdown("#### 📝 Инструкции")
         st.markdown("""
-        1. Start webcam
-        2. Look at the camera
-        3. Emotions will be detected in real-time
-        4. Adjust parameters in sidebar
-        5. Stop when done
+        1. Запустите веб-камеру
+        2. Посмотрите в камеру
+        3. Эмоции будут распознаваться в реальном времени
+        4. Настройте параметры на боковой панели
+        5. Остановите когда закончите
         """)
 
 
@@ -980,7 +916,7 @@ def main():
     # Проверяем доступность бэкенда
 
     # Основной контент в вкладках
-    tab1, tab2, tab3 = st.tabs(["🎬 Upload Video", "📷 Webcam Live", "❓ Help & Support"])
+    tab1, tab2, tab3 = st.tabs(["🎬 Загрузка и обработка", "📷 Веб-камера", "❓ Справка"])
 
     with tab1:
         # Проверяем статус обработки
@@ -998,49 +934,49 @@ def main():
         create_webcam_section()
 
     with tab3:
-        st.markdown("### ❓ Frequently Asked Questions")
+        st.markdown("### ❓ Часто задаваемые вопросы")
 
         faqs = [
             {
-                "question": "How does real-time emotion detection work?",
-                "answer": "The app uses DetectFaceAndRecognizeEmotion class which combines face detection and emotion recognition. It processes each video frame in real-time, drawing bounding boxes and emotion labels."
+                "question": "Как работает распознавание эмоций в реальном времени?",
+                "answer": "Приложение использует класс DetectFaceAndRecognizeEmotion, который объединяет детекцию лиц и распознавание эмоций. Оно обрабатывает каждый кадр видео в реальном времени, рисуя ограничивающие рамки и метки эмоций."
             },
             {
-                "question": "What emotions can be detected?",
-                "answer": "The system detects basic emotions: Happy, Sad, Angry, Surprise, Fear, Disgust, Neutral, and possibly others depending on the model."
+                "question": "Какие эмоции можно распознать?",
+                "answer": "Система распознает базовые эмоции: радость, грусть, злость, удивление, страх, отвращение, нейтральность и возможно другие в зависимости от модели."
             },
             {
-                "question": "Do you store my videos or images?",
-                "answer": "No. All processing is done locally. Videos are temporarily stored only during processing and deleted afterward."
+                "question": "Сохраняете ли вы мои видео или изображения?",
+                "answer": "Нет. Вся обработка выполняется локально. Видео временно сохраняются только во время обработки и удаляются после."
             },
             {
-                "question": "Can I adjust detection parameters?",
-                "answer": "Yes! Use the sidebar to adjust parameters like detection confidence, window size for smoothing, and confidence thresholds."
+                "question": "Могу ли я настроить параметры детекции?",
+                "answer": "Да! Используйте боковую панель для настройки таких параметров, как уверенность детекции, размер окна для сглаживания и пороги уверенности."
             },
             {
-                "question": "What if no faces are detected?",
-                "answer": "Try adjusting the 'Min Detection Confidence' parameter in the sidebar. Also ensure faces are clearly visible and well-lit."
+                "question": "Что делать, если лица не обнаруживаются?",
+                "answer": "Попробуйте настроить параметр 'Минимальная уверенность детекции' на боковой панели. Также убедитесь, что лица хорошо видны и освещены."
             },
             {
-                "question": "Why is FPS displayed?",
-                "answer": "FPS (Frames Per Second) shows the processing speed. Lower FPS means slower processing but might be more accurate."
+                "question": "Для чего отображается FPS?",
+                "answer": "FPS (кадры в секунду) показывает скорость обработки. Более низкий FPS означает более медленную обработку, но может быть точнее."
             }
         ]
 
         for faq in faqs:
-            with st.expander(f"**Q:** {faq['question']}"):
-                st.markdown(f"**A:** {faq['answer']}")
+            with st.expander(f"**В:** {faq['question']}"):
+                st.markdown(f"**О:** {faq['answer']}")
 
         st.markdown("---")
 
-        st.markdown("### 🐛 Troubleshooting")
+        st.markdown("### 🐛 Устранение неполадок")
 
         issues = [
-            ("Webcam not working", "Check browser permissions for camera access. Try refreshing the page."),
-            ("No faces detected", "Adjust detection confidence parameter. Ensure good lighting."),
-            ("Slow performance", "Try reducing video resolution or frame rate."),
-            ("Import errors", "Ensure face_detection_and_emotion_recognition.py is in the current directory."),
-            ("Low FPS", "The model might be computationally intensive. Try on a machine with GPU."),
+            ("Веб-камера не работает", "Проверьте разрешения браузера для доступа к камере. Попробуйте обновить страницу."),
+            ("Лица не обнаруживаются", "Настройте параметр уверенности детекции. Убедитесь в хорошем освещении."),
+            ("Медленная работа", "Попробуйте уменьшить разрешение видео или частоту кадров."),
+            ("Ошибки импорта", "Убедитесь, что файл face_detection_and_emotion_recognition.py находится в текущей директории."),
+            ("Низкий FPS", "Модель может быть вычислительно затратной. Попробуйте использовать компьютер с GPU."),
         ]
 
         for issue, solution in issues:
@@ -1059,8 +995,8 @@ if __name__ == "__main__":
         atexit.register(lambda: st.session_state.get('detection_processor', EmotionDetectionProcessor()).reset())
 
     except Exception as e:
-        st.error(f"Application error: {str(e)}")
-        st.info("Please restart the application and try again.")
+        st.error(f"Ошибка приложения: {str(e)}")
+        st.info("Пожалуйста, перезапустите приложение и попробуйте снова.")
 
-        if st.button("🔄 Restart Application"):
+        if st.button("🔄 Перезапустить приложение"):
             st.rerun()
