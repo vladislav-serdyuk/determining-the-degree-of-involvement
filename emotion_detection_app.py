@@ -463,7 +463,7 @@ def display_sidebar():
         st.markdown("---")
 
         # Кнопка сброса параметров
-        if st.button("🔄 Сбросить по умолчанию", use_container_width=True):
+        if st.button("🔄 Сбросить по умолчанию", width='stretch'):
             st.session_state.backend_params = {
                 'min_detection_confidence': 0.5,
                 'window_size': 15,
@@ -516,14 +516,14 @@ def create_upload_section():
             # Кнопка обработки
             col1, col2 = st.columns(2)
             with col1:
-                if st.button("🚀 Начать распознавание эмоций", type="primary", use_container_width=True):
+                if st.button("🚀 Начать распознавание эмоций", type="primary", width='stretch'):
                     if not BACKEND_AVAILABLE:
                         st.error("Невозможно начать обработку: Backend модуль недоступен. Убедитесь, что файл face_detection_and_emotion_recognition.py находится в текущей директории со всеми необходимыми зависимостями.")
                     else:
                         st.session_state.processing_status = "starting"
                         st.rerun()
             with col2:
-                if st.button("🗑️ Очистить файл", use_container_width=True):
+                if st.button("🗑️ Очистить файл", width='stretch'):
                     st.session_state.uploaded_file_path = None
                     st.rerun()
         else:
@@ -567,10 +567,10 @@ def display_file_info(uploaded_file, video_info):
         )
 
     with col3:
-        st.markdown('<div class="stat-card">', unsafe_allow_html=True)
-        st.markdown(f'<div class="stat-value">{video_info["fps"]}</div>', unsafe_allow_html=True)
-        st.markdown('<div class="stat-label">FPS</div>', unsafe_allow_html=True)
-        st.markdown('</div>', unsafe_allow_html=True)
+        st.metric(
+            label="FPS",
+            value=video_info["fps"]
+        )
 
     with col4:
         file_size_mb = uploaded_file.size / (1024 * 1024)
@@ -599,7 +599,7 @@ def display_video_preview(video_path, video_info):
         for idx, (col, frame) in enumerate(zip(cols, frames)):
             with col:
                 img = Image.fromarray(frame)
-                st.image(img, caption=f"Кадр {idx + 1}", use_container_width=True)
+                st.image(img, caption=f"Кадр {idx + 1}", width='stretch')
 
 
 def process_video():
@@ -709,7 +709,7 @@ def display_result():
                 file_name=os.path.basename(result_path),
                 mime="video/mp4",
                 type="primary",
-                use_container_width=True
+                width='stretch'
             )
 
     else:
@@ -718,7 +718,7 @@ def display_result():
     # Кнопка для новой обработки
     col1, col2 = st.columns(2)
     with col1:
-        if st.button("🔄 Обработать другое видео", use_container_width=True):
+        if st.button("🔄 Обработать другое видео", width='stretch'):
             st.session_state.uploaded_file_path = None
             st.session_state.processing_status = "idle"
             st.session_state.result_path = None
@@ -746,7 +746,7 @@ def display_error():
     5. ✅ Проверьте наличие свободного места на диске
     """)
 
-    if st.button("🔄 Попробовать снова", use_container_width=True):
+    if st.button("🔄 Попробовать снова", width='stretch'):
         st.session_state.processing_status = "idle"
         st.rerun()
 
@@ -769,10 +769,10 @@ def create_webcam_section():
         control_col1, control_col2 = st.columns(2)
 
         with control_col1:
-            start_webcam = st.button("🎬 Запустить веб-камеру", type="primary", use_container_width=True)
+            start_webcam = st.button("🎬 Запустить веб-камеру", type="primary", width='stretch')
 
         with control_col2:
-            stop_webcam = st.button("⏹️ Остановить веб-камеру", type="secondary", use_container_width=True)
+            stop_webcam = st.button("⏹️ Остановить веб-камеру", type="secondary", width='stretch')
 
         # Место для отображения видео
         webcam_placeholder = st.empty()
@@ -836,7 +836,7 @@ def create_webcam_section():
                         img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
                         # Отображаем кадр
-                        webcam_placeholder.image(img_rgb, channels="RGB", use_column_width=True)
+                        webcam_placeholder.image(img_rgb, channels="RGB", width='stretch')
 
                         # Отображаем текущие эмоции
                         if emotions:
