@@ -38,6 +38,13 @@ class EyeAspectRatioAnalyzer:
 
         print(f"EyeAspectRatioAnalyzer инициализирован: threshold={ear_threshold}, frames={consec_frames}")
 
+    def set_ear_threshold(self, ear_threshold: float):
+        """Изменяет порог EAR без сброса счётчиков"""
+        self.ear_threshold = ear_threshold
+
+    def set_consec_frames(self, consec_frames: int):
+        """Изменяет количество кадров без сброса счётчиков"""
+        self.consec_frames = consec_frames
 
     @staticmethod
     def _calculate_ear(eye_coords: list[tuple[float, float]]) -> float:

@@ -13,6 +13,7 @@ import sys
 import subprocess
 from collections import deque
 from time import time as current_time
+import torch
 
 sys.path.append('face_detection_and_emotion_recognition.py')
 
@@ -30,6 +31,16 @@ try:
 except ImportError as e:
     st.error(f"Не удалось импортировать модуль бэкенда: {e}")
     BACKEND_AVAILABLE = False
+
+# Импорт модулей EAR и HeadPose (доп.)
+EAR_HEADPOSE_AVAILABLE = False
+try:
+    from analyze_ear import EyeAspectRatioAnalyzer, classify_attention_by_ear
+    from analyze_head_pose import HeadPoseEstimator, classify_attention_state
+    EAR_HEADPOSE_AVAILABLE = True
+except ImportError:
+    pass
+
 
 APP_TITLE = "Распознавание эмоций в реальном времени"
 APP_ICON = "🎭"
@@ -73,23 +84,45 @@ class EmotionDetectionProcessor:
         self.current_emotions = []
 
     def initialize_models(self, params):
-        """Инициализирует модели для распознавания эмоций"""
+        """
+        Инициализирует модели для распознавания эмоций. 
+        Дополнительно инициализирует EAR и HeadPose Estimation, если импортированы.
+        """
         try:
             if BACKEND_AVAILABLE:
-                #детектор лиц
+                # Детектор лиц
                 face_detector = FaceDetector(
                     min_detection_confidence=params.get('min_detection_confidence', 0.5)
                 )
 
-                #=распознаватель эмоций
+                # Распознаватель эмоций
                 emotion_recognizer = EmotionRecognizer(
                     window_size=params.get('window_size', 15),
                     confidence_threshold=params.get('confidence_threshold', 0.55),
                     ambiguity_threshold=params.get('ambiguity_threshold', 0.15)
                 )
 
-                #=основной детектор
-                self.detector = DetectFaceAndRecognizeEmotion(face_detector, emotion_recognizer)
+                # EAR анализатор (доп.)
+                ear_analyzer = None
+                if EAR_HEADPOSE_AVAILABLE and params.get('enable_ear', False):
+                    ear_analyzer = EyeAspectRatioAnalyzer(
+                        ear_threshold=params.get('ear_threshold', 0.25),
+                        consec_frames=params.get('consec_frames', 3)
+                    )
+
+                # Head Pose анализатор (доп.)
+                head_pose_estimator = None
+                if EAR_HEADPOSE_AVAILABLE and params.get('enable_head_pose', False):
+                    head_pose_estimator = HeadPoseEstimator()
+
+                # Основной детектор
+                self.detector = DetectFaceAndRecognizeEmotion(
+                    face_detector,
+                    emotion_recognizer,
+                    ear_analyzer=ear_analyzer,
+                    head_pose_estimator=head_pose_estimator,
+                    use_face_mesh=(ear_analyzer is not None or head_pose_estimator is not None)
+                )
 
                 self.is_initialized = True
                 return True, "Модели успешно инициализированы"
@@ -109,11 +142,11 @@ class EmotionDetectionProcessor:
             if flip_h:
                 frame = cv2.flip(frame, 1)
 
-            # Обрабатка кадра с помощью детектора
-            processed_frame, emotions = self.detector.detect_and_recognize(frame)
+            # Обработка кадра с помощью детектора
+            processed_frame, results = self.detector.detect_and_recognize(frame)
 
-            self.current_emotions = emotions
-            return processed_frame, emotions
+            self.current_emotions = results
+            return processed_frame, results
 
         except Exception as e:
             st.error(f"Ошибка обработки кадра: {e}")
@@ -251,8 +284,8 @@ class VideoFileProcessor:
                 out.write(processed_frame)
 
                 # Сохраняем эмоции для статистики
-                for emotion, confidence in emotions:
-                    all_emotions.append(emotion)
+                for result in emotions:
+                    all_emotions.append(result['emotion'])
 
                 frame_count += 1
 
@@ -365,11 +398,21 @@ if 'backend_params' not in st.session_state:
         'ambiguity_threshold': 0.15,
         'margin': 20,
         'flip_h': False,
-        'show_preview': False
+        'show_preview': False,
+        'enable_ear': False,            # Включить EAR анализ
+        'enable_head_pose': False,      # Включить Head Pose анализ
+        'ear_threshold': 0.25,          # Порог EAR для закрытых глаз
+        'consec_frames': 1              # Количество последовательных кадров для моргания (1 = любое закрытие глаз)
     }
 
 if 'webcam_running' not in st.session_state:
     st.session_state.webcam_running = False
+
+if 'webcam_detector' not in st.session_state:
+    st.session_state.webcam_detector = None
+
+if 'prev_webcam_params' not in st.session_state:
+    st.session_state.prev_webcam_params = None
 
 
 # ============================================
@@ -408,7 +451,7 @@ def display_sidebar():
         # Face Detector Parameters
         st.markdown("##### Детекция лиц")
         st.session_state.backend_params['min_detection_confidence'] = st.slider(
-            "Минимальная уверенность детекции",
+            "Минимальная уверенность детекции (min_detection_confidence)",
             min_value=0.0,
             max_value=1.0,
             value=st.session_state.backend_params['min_detection_confidence'],
@@ -420,44 +463,79 @@ def display_sidebar():
         st.markdown("##### Распознавание эмоций")
 
         st.session_state.backend_params['window_size'] = st.slider(
-            "Размер окна",
+            "Размер окна сглаживания (window_size)",
             min_value=3,
             max_value=30,
             value=st.session_state.backend_params['window_size'],
             step=1,
-            help="Размер окна для сглаживания"
+            help="Размер окна для temporal smoothing (взвешенное усреднение по истории кадров)"
         )
 
         st.session_state.backend_params['confidence_threshold'] = st.slider(
-            "Порог уверенности",
+            "Порог уверенности (confidence_threshold)",
             min_value=0.0,
             max_value=1.0,
             value=st.session_state.backend_params['confidence_threshold'],
             step=0.01,
-            help="Минимальный порог уверенности для эмоции"
+            help="Минимальный порог уверенности для эмоции (ниже → fallback к Neutral)"
         )
 
         st.session_state.backend_params['ambiguity_threshold'] = st.slider(
-            "Порог амбивалентности",
+            "Порог амбивалентности (ambiguity_threshold)",
             min_value=0.0,
             max_value=1.0,
             value=st.session_state.backend_params['ambiguity_threshold'],
             step=0.01,
-            help="Порог для амбивалентных эмоций"
+            help="Порог для амбивалентных эмоций (если две эмоции слишком близки → Neutral)"
         )
+
+        # Настройка EAR и HeadPose
+        if EAR_HEADPOSE_AVAILABLE:
+            st.markdown("##### Дополнительные модули")
+
+            st.session_state.backend_params['enable_ear'] = st.checkbox(
+                "Включить Eye Aspect Ratio (enable_ear)",
+                value=st.session_state.backend_params['enable_ear'],
+                help="Анализ состояния глаз и моргания (требует больше ресурсов)"
+            )
+
+            if st.session_state.backend_params['enable_ear']:
+                st.session_state.backend_params['ear_threshold'] = st.slider(
+                    "Порог EAR (ear_threshold)",
+                    min_value=0.10,
+                    max_value=0.40,
+                    value=st.session_state.backend_params['ear_threshold'],
+                    step=0.01,
+                    help="Порог для определения закрытых глаз (меньше → строже)"
+                )
+
+                st.session_state.backend_params['consec_frames'] = st.slider(
+                    "Кадров для моргания (consec_frames)",
+                    min_value=1,
+                    max_value=10,
+                    value=st.session_state.backend_params['consec_frames'],
+                    step=1,
+                    help="Минимум кадров с закрытыми глазами для засчитывания моргания"
+                )
+
+            st.session_state.backend_params['enable_head_pose'] = st.checkbox(
+                "Включить Head Pose Estimation (enable_head_pose)",
+                value=st.session_state.backend_params['enable_head_pose'],
+                help="Оценка направления взгляда и позы головы"
+            )
 
         # Общие параметры
         st.markdown("##### Общие настройки")
         st.session_state.backend_params['flip_h'] = st.checkbox(
-            "Отразить по горизонтали",
+            "Отразить по горизонтали (flip_h)",
             value=st.session_state.backend_params['flip_h'],
-            help="Отзеркаливание по горизонтали"
+            help="Отзеркаливание изображения по горизонтали (для веб-камеры)"
         )
 
         st.session_state.backend_params['show_preview'] = st.checkbox(
-            "Показывать превью",
+            "Показывать превью (show_preview)",
             value=st.session_state.backend_params['show_preview'],
-            help="Показывать превью во время обработки"
+            help="Показывать превью кадров во время обработки видео"
         )
 
         st.markdown("---")
@@ -623,7 +701,8 @@ def process_video():
             # Обновление статистики
             if emotions:
                 emotion_stats = {}
-                for emotion, confidence in emotions:
+                for result in emotions:
+                    emotion = result['emotion']
                     emotion_stats[emotion] = emotion_stats.get(emotion, 0) + 1
 
                 stats_text.markdown("**Текущие эмоции:** " + ", ".join([f"{k}: {v}" for k, v in emotion_stats.items()]))
@@ -801,6 +880,43 @@ def create_webcam_section():
                 cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
                 cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 
+
+                # Инициализируем детектор, если его нет
+                if st.session_state.webcam_detector is None:
+                    params = st.session_state.backend_params
+
+                    face_detector = FaceDetector(
+                        min_detection_confidence=params['min_detection_confidence']
+                    )
+                    emotion_recognizer = EmotionRecognizer(
+                        device='cuda' if torch.cuda.is_available() else 'cpu',
+                        window_size=params['window_size'],
+                        confidence_threshold=params['confidence_threshold'],
+                        ambiguity_threshold=params['ambiguity_threshold']
+                    )
+
+                    # EAR анализатор (доп.)
+                    ear_analyzer = None
+                    if EAR_HEADPOSE_AVAILABLE and params.get('enable_ear', False):
+                        ear_analyzer = EyeAspectRatioAnalyzer(
+                            ear_threshold=params.get('ear_threshold', 0.25),
+                            consec_frames=params.get('consec_frames', 3)
+                        )
+
+                    # Head Pose анализатор (доп.)
+                    head_pose_estimator = None
+                    if EAR_HEADPOSE_AVAILABLE and params.get('enable_head_pose', False):
+                        head_pose_estimator = HeadPoseEstimator()
+
+                    st.session_state.webcam_detector = DetectFaceAndRecognizeEmotion(
+                        face_detector,
+                        emotion_recognizer,
+                        ear_analyzer=ear_analyzer,
+                        head_pose_estimator=head_pose_estimator,
+                        use_face_mesh=(ear_analyzer is not None or head_pose_estimator is not None)
+                    )
+                    st.session_state.prev_webcam_params = params.copy()
+
                 # Используем функцию process_video_stream из бэкенда
                 try:
                     fps_history = deque(maxlen=3)
@@ -810,16 +926,66 @@ def create_webcam_section():
                     emotion_history = []
                     start_time = current_time()
 
-                    for img, emotions in process_video_stream(cap, flip_h=st.session_state.backend_params['flip_h']):
+                    for img, emotions in process_video_stream(cap, st.session_state.webcam_detector,
+                                                             flip_h=st.session_state.backend_params['flip_h']):
                         if not st.session_state.get('webcam_running', False):
                             break
 
-                        # Сохраняем эмоции для статистики
-                        if emotions:
-                            for emotion, confidence in emotions:
-                                emotion_history.append(emotion)
+                        # Проверка изменения параметров (для hot-reload)
+                        if st.session_state.prev_webcam_params != st.session_state.backend_params:
+                            detector = st.session_state.webcam_detector
+                            params = st.session_state.backend_params
+                            prev_params = st.session_state.prev_webcam_params
 
-                        # Ограничиваем историю
+                            # Обновление FaceDetector
+                            if params['min_detection_confidence'] != prev_params.get('min_detection_confidence'):
+                                detector.face_detector.set_min_detection_confidence(params['min_detection_confidence'])
+
+                            # Обновление EmotionRecognizer
+                            if params['window_size'] != prev_params.get('window_size'):
+                                detector.emotion_recognizer.set_window_size(params['window_size'])
+
+                            if params['confidence_threshold'] != prev_params.get('confidence_threshold'):
+                                detector.emotion_recognizer.set_confidence_threshold(params['confidence_threshold'])
+
+                            if params['ambiguity_threshold'] != prev_params.get('ambiguity_threshold'):
+                                detector.emotion_recognizer.set_ambiguity_threshold(params['ambiguity_threshold'])
+
+                            # Hot-reload EAR анализатора
+                            if EAR_HEADPOSE_AVAILABLE:
+                                # Включение/выключение EAR
+                                if params.get('enable_ear') != prev_params.get('enable_ear'):
+                                    if params.get('enable_ear'):
+                                        new_ear = EyeAspectRatioAnalyzer(
+                                            ear_threshold=params.get('ear_threshold', 0.25),
+                                            consec_frames=params.get('consec_frames', 1)
+                                        )
+                                        detector.set_ear_analyzer(new_ear)
+                                    else:
+                                        detector.set_ear_analyzer(None)
+                                # Изменение параметров EAR (без сброса счётчиков)
+                                elif params.get('enable_ear') and detector.ear_analyzer:
+                                    if params.get('ear_threshold') != prev_params.get('ear_threshold'):
+                                        detector.ear_analyzer.set_ear_threshold(params.get('ear_threshold', 0.25))
+                                    if params.get('consec_frames') != prev_params.get('consec_frames'):
+                                        detector.ear_analyzer.set_consec_frames(params.get('consec_frames', 1))
+
+                                # Hot-reload HeadPose анализатора
+                                if params.get('enable_head_pose') != prev_params.get('enable_head_pose'):
+                                    if params.get('enable_head_pose'):
+                                        detector.set_head_pose_estimator(HeadPoseEstimator())
+                                    else:
+                                        detector.set_head_pose_estimator(None)
+
+                            # Обновление prev_params
+                            st.session_state.prev_webcam_params = params.copy()
+
+                        # Сохранение эмоции для статистики
+                        if emotions:
+                            for result in emotions:
+                                emotion_history.append(result['emotion'])
+
+                        # Ограничение истории
                         if len(emotion_history) > 100:
                             emotion_history = emotion_history[-100:]
 
@@ -828,24 +994,42 @@ def create_webcam_section():
                         fps_history.append(fps)
                         avg_fps = round(sum(fps_history) / len(fps_history))
 
-                        # Добавляем FPS на изображение
+                        # FPS на изображение
                         cv2.putText(img, f'FPS: {avg_fps}', (5, 20),
                                     cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 255), 2)
 
-                        # Конвертируем для отображения в Streamlit
+                        # Конвертация для отображения в Streamlit
                         img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
-                        # Отображаем кадр
+                        # Отображение кадра
                         webcam_placeholder.image(img_rgb, channels="RGB", width='stretch')
 
-                        # Отображаем текущие эмоции
+                        # Отображение текущих эмоции и доп. данных
                         if emotions:
-                            emotion_text = "**Обнаруженные эмоции:**\n"
-                            for i, (emotion, confidence) in enumerate(emotions):
-                                emotion_text += f"Лицо {i + 1}: {emotion} ({confidence:.2f})\n"
+                            emotion_text = "**Обнаруженные лица:**\n\n"
+                            for i, result in enumerate(emotions):
+                                emotion_text += f"**Лицо {i + 1}:**\n"
+                                emotion_text += f"- Эмоция: {result['emotion']} ({result['confidence']:.2f})\n"
+
+                                # EAR данные
+                                if result.get('ear'):
+                                    ear_data = result['ear']
+                                    emotion_text += f"- EAR: {ear_data['avg_ear']:.3f} "
+                                    emotion_text += f"({'Открыты' if ear_data['eyes_open'] else 'Закрыты'}) "
+                                    emotion_text += f"[Моргания: {ear_data['blink_count']}]\n"
+
+                                # HeadPose данные
+                                if result.get('head_pose'):
+                                    hp = result['head_pose']
+                                    emotion_text += f"- Поза: Pitch={hp['pitch']:.0f}° Yaw={hp['yaw']:.0f}° Roll={hp['roll']:.0f}°\n"
+                                    if 'attention_state' in hp:
+                                        emotion_text += f"- Состояние: {hp['attention_state']}\n"
+
+                                emotion_text += "\n"
+
                             emotions_placeholder.markdown(emotion_text)
 
-                        # Обновляем статистику
+                        # Обновление статистики
                         if emotion_history:
                             # Подсчет статистики
                             stats = {}
@@ -869,14 +1053,24 @@ def create_webcam_section():
                     st.error(f"Ошибка обработки веб-камеры: {e}")
                 finally:
                     cap.release()
-                    webcam_placeholder.empty()
+
+                    # Cleanup детектора при остановке
+                    if st.session_state.webcam_detector:
+                        if hasattr(st.session_state.webcam_detector.face_detector, 'close'):
+                            st.session_state.webcam_detector.face_detector.close()
+                        if hasattr(st.session_state.webcam_detector.emotion_recognizer, 'reset'):
+                            st.session_state.webcam_detector.emotion_recognizer.reset()
+                        st.session_state.webcam_detector = None
+                        st.session_state.prev_webcam_params = None
+                    # Показываем сообщение вместо empty() чтобы избежать ошибки MediaFileStorageError
+                    webcam_placeholder.info("📷 Веб-камера остановлена")
                     emotions_placeholder.empty()
                     stats_placeholder.empty()
                     fps_placeholder.empty()
 
     with col2:
         # Статус и информация
-        st.markdown("#### 🔴 Статус")
+        st.markdown("#### Статус")
         if st.session_state.get('webcam_running', False):
             st.success("✅ Веб-камера активна")
             st.info("Детекция лиц и эмоций в реальном времени")
@@ -902,6 +1096,7 @@ def create_webcam_section():
         4. Настройте параметры на боковой панели
         5. Остановите когда закончите
         """)
+
 
 
 # ============================================
