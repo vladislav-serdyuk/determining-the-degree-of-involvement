@@ -1,7 +1,10 @@
 numpy
 torch
 opencv-python
+torchvision
 mediapipe==0.10.13
+timm==0.9.16
 emotiefflib
 pydantic
 fastapi
+uvicorn

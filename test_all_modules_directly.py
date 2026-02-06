@@ -9,10 +9,10 @@ from datetime import datetime
 import cv2
 import mediapipe as mp
 
+from video_processing import EmotionRecognizer
 from video_processing.analyze_ear import EyeAspectRatioAnalyzer, classify_attention_by_ear, LEFT_EYE_LANDMARKS, \
     RIGHT_EYE_LANDMARKS
 from video_processing.analyze_head_pose import HeadPoseEstimator, classify_attention_state, HEAD_POSE_LANDMARKS
-from video_processing.face_detection_and_emotion_recognition import EmotionRecognizer
 
 # Инициализация MediaPipe (в этом скрипте отдельная реализация детектора лица через Face Mesh)
 mp_face_mesh = mp.solutions.face_mesh
