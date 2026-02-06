@@ -1,0 +1,7 @@
+numpy
+torch
+opencv-python
+mediapipe==0.10.13
+emotiefflib
+pydantic
+fastapi
