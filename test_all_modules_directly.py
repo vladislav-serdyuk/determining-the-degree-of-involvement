@@ -2,21 +2,22 @@
 Тестовый скрипт для проверки Face Mesh pipeline с Head Pose и EAR
 """
 
-import cv2
 import time
-import mediapipe as mp
 from collections import deque
 from datetime import datetime
 
-from face_detection_and_emotion_recognition import EmotionRecognizer
-from analyze_head_pose import HeadPoseEstimator, classify_attention_state, HEAD_POSE_LANDMARKS
-from analyze_ear import EyeAspectRatioAnalyzer, classify_attention_by_ear, LEFT_EYE_LANDMARKS, RIGHT_EYE_LANDMARKS
+import cv2
+import mediapipe as mp
+
+from video_processing.analyze_ear import EyeAspectRatioAnalyzer, classify_attention_by_ear, LEFT_EYE_LANDMARKS, \
+    RIGHT_EYE_LANDMARKS
+from video_processing.analyze_head_pose import HeadPoseEstimator, classify_attention_state, HEAD_POSE_LANDMARKS
+from video_processing.face_detection_and_emotion_recognition import EmotionRecognizer
 
 # Инициализация MediaPipe (в этом скрипте отдельная реализация детектора лица через Face Mesh)
 mp_face_mesh = mp.solutions.face_mesh
 mp_drawing = mp.solutions.drawing_utils
 mp_drawing_styles = mp.solutions.drawing_styles
-
 
 # Ключевые landmarks (точки от Face Mesh) для визуализации (Head Pose + Eyes)
 KEY_LANDMARKS = HEAD_POSE_LANDMARKS + LEFT_EYE_LANDMARKS + RIGHT_EYE_LANDMARKS
@@ -104,7 +105,6 @@ class FaceMeshAnalyzer:
         x1, y1, x2, y2 = bbox
         return image[y1:y2, x1:x2]
 
-
     def _draw_landmarks(self, image, face_landmarks, image_width, image_height):
         """
         Рисует landmarks в зависимости от выбранного режима визуализации.
@@ -116,24 +116,23 @@ class FaceMeshAnalyzer:
             image_height: Высота изображения
         """
 
-        if self.landmark_viz_mode == 0:                 # off - пропуск, возврат из метода
+        if self.landmark_viz_mode == 0:  # off - пропуск, возврат из метода
             return
-        elif self.landmark_viz_mode == 1:               # key - только ключевые точки (+ вокруг глаз)
+        elif self.landmark_viz_mode == 1:  # key - только ключевые точки (+ вокруг глаз)
             for idx in KEY_LANDMARKS:
                 lm = face_landmarks.landmark[idx]
                 x = int(lm.x * image_width)
                 y = int(lm.y * image_height)
                 cv2.circle(image, (x, y), 2, (0, 255, 0), -1)
-        elif self.landmark_viz_mode == 2:               # all - все точки Face Mesh
+        elif self.landmark_viz_mode == 2:  # all - все точки Face Mesh
             for lm in face_landmarks.landmark:
                 x = int(lm.x * image_width)
                 y = int(lm.y * image_height)
                 cv2.circle(image, (x, y), 1, (0, 255, 0), -1)
 
-
     def toggle_landmark_visualization(self):
         """Переключает режим визуализации landmarks: off -> key -> all -> off"""
-        
+
         self.landmark_viz_mode = (self.landmark_viz_mode + 1) % 3
         mode_names = ["OFF", "KEY POINTS", "ALL POINTS"]
         print(f"Landmark visualization: {mode_names[self.landmark_viz_mode]}")
@@ -207,7 +206,6 @@ class FaceMeshAnalyzer:
 
         return results, annotated_image
 
-
     def _visualize_results(self, image, results, face_landmarks, w, h):
         """
         Визуализирует результаты анализа на изображении.
@@ -233,7 +231,7 @@ class FaceMeshAnalyzer:
             if results['emotion']:
                 emotion_text = f"{results['emotion']}: {results['emotion_confidence']:.2f}"
                 cv2.putText(image, emotion_text, (x1, y_offset),
-                           cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 255), 2)
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 255), 2)
                 y_offset -= 25
 
             # Head Pose
@@ -241,12 +239,12 @@ class FaceMeshAnalyzer:
                 hp = results['head_pose']
                 pose_text = f"P:{hp['pitch']:.1f} Y:{hp['yaw']:.1f} R:{hp['roll']:.1f}"
                 cv2.putText(image, pose_text, (x1, y_offset),
-                           cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
                 y_offset -= 20
 
                 attention_text = f"Att: {hp['attention_state']}"
                 cv2.putText(image, attention_text, (x1, y_offset),
-                           cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
                 y_offset -= 20
 
             # EAR
@@ -254,12 +252,12 @@ class FaceMeshAnalyzer:
                 eyes = results['eyes']
                 ear_text = f"EAR:{eyes['avg_ear']:.2f} Blinks:{eyes['blink_count']}"
                 cv2.putText(image, ear_text, (x1, y_offset),
-                           cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
                 y_offset -= 20
 
                 eye_state_text = f"Eyes: {eyes['attention_state']}"
                 cv2.putText(image, eye_state_text, (x1, y_offset),
-                           cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
 
     def close(self):
         """Освобождение ресурсов (закрытие анализатора)"""
@@ -278,9 +276,9 @@ def log_frame_results(log_file, frame_count, results, fps, timestamp):
         fps: Текущий FPS
         timestamp: Время обработки кадра
     """
-    log_file.write(f"\n{'='*80}\n")
+    log_file.write(f"\n{'=' * 80}\n")
     log_file.write(f"Frame: {frame_count} | Time: {timestamp} | FPS: {fps:.2f}\n")
-    log_file.write(f"{'='*80}\n")
+    log_file.write(f"{'=' * 80}\n")
 
     if results['face_detected']:
         # Bounding box
@@ -334,10 +332,10 @@ def main():
     log_file = open(log_filename, 'w', encoding='utf-8')
 
     # Заголовок лога
-    log_file.write("="*80 + "\n")
+    log_file.write("=" * 80 + "\n")
     log_file.write("Face Mesh Test Pipeline - Analysis Log\n")
     log_file.write(f"Started: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
-    log_file.write("="*80 + "\n")
+    log_file.write("=" * 80 + "\n")
     log_file.flush()
 
     print(f"\nЛог записывается в файл: {log_filename}")
@@ -356,7 +354,7 @@ def main():
         print(f"CUDA недоступна, используем CPU")
         log_file.write(f"\nDevice: CPU\n")
 
-    log_file.write("="*80 + "\n\n")
+    log_file.write("=" * 80 + "\n\n")
     log_file.flush()
 
     # Инициализация анализатора
@@ -393,13 +391,13 @@ def main():
 
             # Отображение FPS
             cv2.putText(annotated, f"FPS: {avg_fps:.1f}", (10, 30),
-                       cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
 
             # Отображение режима landmarks
             mode_names = ["OFF", "KEY", "ALL"]
             viz_mode_text = f"Landmarks: {mode_names[analyzer.landmark_viz_mode]}"
             cv2.putText(annotated, viz_mode_text, (10, 60),
-                       cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 0), 2)
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 0), 2)
 
             # Вывод детальной информации в консоль каждую секунду (~30 FPS, т.е. каждые 30 кадров)
             if frame_count % 30 == 0 and results['face_detected']:
@@ -417,7 +415,7 @@ def main():
                     print(f"Attention (eyes): {eyes['attention_state']}")
 
             # Логирование в файл каждые 30 кадров
-            if results['face_detected'] and  frame_count % 30 == 0:
+            if results['face_detected'] and frame_count % 30 == 0:
                 current_timestamp = datetime.now().strftime('%H:%M:%S.%f')[:-3]
                 log_frame_results(log_file, frame_count, results, avg_fps, current_timestamp)
 
@@ -445,9 +443,9 @@ def main():
         print("\nЗавершение работы...")
 
         # Закрытие лог-файла с финальной записью
-        log_file.write("\n" + "="*80 + "\n")
+        log_file.write("\n" + "=" * 80 + "\n")
         log_file.write(f"Session ended: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
-        log_file.write("="*80 + "\n")
+        log_file.write("=" * 80 + "\n")
         log_file.close()
         print(f"Лог сохранён: {log_filename}")
 

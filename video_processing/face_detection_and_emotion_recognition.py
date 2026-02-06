@@ -3,12 +3,12 @@
 """
 
 import typing
-from time import time
 from collections import deque
+from time import time
 
-import torch
 import cv2
 import mediapipe as mp
+import torch
 from emotiefflib.facial_analysis import EmotiEffLibRecognizer
 from emotiefflib.facial_analysis import get_model_list
 
@@ -22,6 +22,7 @@ mp_drawing_styles = mp.solutions.drawing_styles
 try:
     from analyze_ear import EyeAspectRatioAnalyzer, classify_attention_by_ear
     from analyze_head_pose import HeadPoseEstimator, classify_attention_state
+
     EAR_AVAILABLE = True
 except ImportError:
     EAR_AVAILABLE = False
@@ -172,7 +173,8 @@ class EmotionRecognizer:
     @staticmethod
     def _validate_confidence_threshold(confidence_threshold: float):
         if not isinstance(confidence_threshold, (float, int)):
-            raise TypeError(f'Type of "confidence_threshold" should be float, got {type(confidence_threshold).__name__}')
+            raise TypeError(
+                f'Type of "confidence_threshold" should be float, got {type(confidence_threshold).__name__}')
         if confidence_threshold < 0 or confidence_threshold > 1:
             raise ValueError(f'"confidence_threshold" should be in [0;1]')
 
@@ -415,7 +417,6 @@ class DetectFaceAndRecognizeEmotion:
         emotion_text = f"{result['emotion']}: {result['confidence']:.2f}"
         cv2.putText(image, emotion_text, (x1, y1 - 10),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 255), 2)
-
 
         # EAR (если доступен)
         y_offset = y1 - 30

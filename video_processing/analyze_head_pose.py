@@ -4,9 +4,10 @@
 для расчёта метрики вовлечённости
 """
 
-import numpy as np
-import cv2
 import math
+
+import cv2
+import numpy as np
 
 # Индексы landmarks для Head Pose (6-точечная модель)
 HEAD_POSE_LANDMARKS = [1, 33, 61, 199, 263, 291]
@@ -20,12 +21,12 @@ HEAD_POSE_LANDMARKS = [1, 33, 61, 199, 263, 291]
 # 3D-модель лица в мировых координатах      (в произвольных единицах)
 # Эти координаты представляют усреднённую модель человеческого лица
 MODEL_POINTS_3D = np.array([
-    (0.0, 0.0, 0.0),             # Nose tip
-    (-225.0, 170.0, -135.0),     # Left eye corner
-    (-150.0, -150.0, -125.0),    # Left mouth corner
-    (0.0, -330.0, -65.0),        # Chin
-    (225.0, 170.0, -135.0),      # Right eye corner
-    (150.0, -150.0, -125.0)      # Right mouth corner
+    (0.0, 0.0, 0.0),  # Nose tip
+    (-225.0, 170.0, -135.0),  # Left eye corner
+    (-150.0, -150.0, -125.0),  # Left mouth corner
+    (0.0, -330.0, -65.0),  # Chin
+    (225.0, 170.0, -135.0),  # Right eye corner
+    (150.0, -150.0, -125.0)  # Right mouth corner
 ], dtype=np.float64)
 
 
@@ -35,7 +36,6 @@ class HeadPoseEstimator:
     def __init__(self):
         """Инициализация анализатора позы головы (класса)"""
         print("HeadPoseEstimator инициализирован")
-
 
     @staticmethod
     def _rotation_matrix_to_angles(rotation_matrix: np.ndarray) -> tuple[float, float, float]:
@@ -54,7 +54,7 @@ class HeadPoseEstimator:
 
         # Формулы для преобразования матрицы поворота в углы Эйлера
         x = math.atan2(rotation_matrix[2, 1], rotation_matrix[2, 2])
-        y = math.atan2(-rotation_matrix[2, 0], math.sqrt(rotation_matrix[0, 0]**2 + rotation_matrix[1, 0]**2))
+        y = math.atan2(-rotation_matrix[2, 0], math.sqrt(rotation_matrix[0, 0] ** 2 + rotation_matrix[1, 0] ** 2))
         z = math.atan2(rotation_matrix[1, 0], rotation_matrix[0, 0])
 
         # Конвертация радиан в градусы
@@ -64,8 +64,8 @@ class HeadPoseEstimator:
 
         return pitch, yaw, roll
 
-
-    def estimate(self, face_landmarks, image_width: int, image_height: int) -> dict[str, float | tuple[float, float, float]] | None:
+    def estimate(self, face_landmarks, image_width: int, image_height: int) -> dict[str, float | tuple[
+        float, float, float]] | None:
         """
         Оценивает позу головы на основе landmarks точек (для одного лица).
 
@@ -85,7 +85,7 @@ class HeadPoseEstimator:
             }
             None, если не удалось вычислить позу
         """
-        
+
         # Извлечение 2D координат ключевых точек для PnP
         image_points = np.array([
             (face_landmarks.landmark[idx].x * image_width,
@@ -94,7 +94,7 @@ class HeadPoseEstimator:
         ], dtype=np.float64)
 
         # Матрица камеры (упрощ. (быстрая) модель pinhole camera)
-        focal_length = image_width                      # Приближение: focal length ≈ image width
+        focal_length = image_width  # Приближение: focal length ≈ image width
         center = (image_width / 2, image_height / 2)
         camera_matrix = np.array([
             [focal_length, 0, center[0]],
@@ -104,7 +104,6 @@ class HeadPoseEstimator:
 
         # Коэффициенты дисторшена       (предполагаем отсутствие искажений)
         dist_coeffs = np.zeros((4, 1))
-
 
         # Решение Perspective-n-Point (PnP) задачи
         success, rotation_vec, translation_vec = cv2.solvePnP(
@@ -152,11 +151,10 @@ def classify_attention_state(pitch: float, yaw: float, roll: float) -> str:
 
     # Критерии внимания (пороговые значения)
     if abs_pitch < 10 and abs_yaw < 15:
-        return "Highly Attentive"                   # Прямой взгляд на экран
+        return "Highly Attentive"  # Прямой взгляд на экран
     elif abs_pitch < 20 and abs_yaw < 25:
-        return "Attentive"                          # Небольшое отклонение
+        return "Attentive"  # Небольшое отклонение
     elif abs_pitch < 30 and abs_yaw < 40:
-        return "Distracted"                         # Заметное отклонение
+        return "Distracted"  # Заметное отклонение
     else:
-        return "Very Distracted"                    # Взгляд в сторону/вниз/вверх
-
+        return "Very Distracted"  # Взгляд в сторону/вниз/вверх

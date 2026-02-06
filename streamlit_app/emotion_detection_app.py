@@ -1,25 +1,21 @@
-import streamlit as st
+import atexit
 import os
+import sys
 import tempfile
+from collections import deque
+from pathlib import Path
+from time import time as current_time
+
 import cv2
 import numpy as np
-from PIL import Image
-import time
-import threading
-import queue
-import atexit
-from pathlib import Path
-import sys
-import subprocess
-from collections import deque
-from time import time as current_time
+import streamlit as st
 import torch
+from PIL import Image
 
-sys.path.append('face_detection_and_emotion_recognition.py')
-
+sys.path.append('.')
 
 try:
-    from face_detection_and_emotion_recognition import (
+    from video_processing.face_detection_and_emotion_recognition import (
         FaceDetector,
         EmotionRecognizer,
         DetectFaceAndRecognizeEmotion,
@@ -35,12 +31,12 @@ except ImportError as e:
 # Импорт модулей EAR и HeadPose (доп.)
 EAR_HEADPOSE_AVAILABLE = False
 try:
-    from analyze_ear import EyeAspectRatioAnalyzer, classify_attention_by_ear
-    from analyze_head_pose import HeadPoseEstimator, classify_attention_state
+    from video_processing.analyze_ear import EyeAspectRatioAnalyzer, classify_attention_by_ear
+    from video_processing.analyze_head_pose import HeadPoseEstimator, classify_attention_state
+
     EAR_HEADPOSE_AVAILABLE = True
 except ImportError:
     pass
-
 
 APP_TITLE = "Распознавание эмоций в реальном времени"
 APP_ICON = "🎭"
@@ -58,6 +54,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+
 # Загрузка внешних CSS стилей
 def load_css():
     """Загружает внешний CSS файл"""
@@ -67,6 +64,7 @@ def load_css():
             st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
     else:
         st.warning("Файл стилей styles.css не найден")
+
 
 load_css()
 
@@ -399,10 +397,10 @@ if 'backend_params' not in st.session_state:
         'margin': 20,
         'flip_h': False,
         'show_preview': False,
-        'enable_ear': False,            # Включить EAR анализ
-        'enable_head_pose': False,      # Включить Head Pose анализ
-        'ear_threshold': 0.25,          # Порог EAR для закрытых глаз
-        'consec_frames': 1              # Количество последовательных кадров для моргания (1 = любое закрытие глаз)
+        'enable_ear': False,  # Включить EAR анализ
+        'enable_head_pose': False,  # Включить Head Pose анализ
+        'ear_threshold': 0.25,  # Порог EAR для закрытых глаз
+        'consec_frames': 1  # Количество последовательных кадров для моргания (1 = любое закрытие глаз)
     }
 
 if 'webcam_running' not in st.session_state:
@@ -596,7 +594,8 @@ def create_upload_section():
             with col1:
                 if st.button("🚀 Начать распознавание эмоций", type="primary", width='stretch'):
                     if not BACKEND_AVAILABLE:
-                        st.error("Невозможно начать обработку: Backend модуль недоступен. Убедитесь, что файл face_detection_and_emotion_recognition.py находится в текущей директории со всеми необходимыми зависимостями.")
+                        st.error(
+                            "Невозможно начать обработку: Backend модуль недоступен. Убедитесь, что файл face_detection_and_emotion_recognition.py находится в текущей директории со всеми необходимыми зависимостями.")
                     else:
                         st.session_state.processing_status = "starting"
                         st.rerun()
@@ -880,7 +879,6 @@ def create_webcam_section():
                 cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
                 cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 
-
                 # Инициализируем детектор, если его нет
                 if st.session_state.webcam_detector is None:
                     params = st.session_state.backend_params
@@ -927,7 +925,7 @@ def create_webcam_section():
                     start_time = current_time()
 
                     for img, emotions in process_video_stream(cap, st.session_state.webcam_detector,
-                                                             flip_h=st.session_state.backend_params['flip_h']):
+                                                              flip_h=st.session_state.backend_params['flip_h']):
                         if not st.session_state.get('webcam_running', False):
                             break
 
@@ -1098,7 +1096,6 @@ def create_webcam_section():
         """)
 
 
-
 # ============================================
 # ОСНОВНОЙ ИНТЕРФЕЙС
 # ============================================
@@ -1167,10 +1164,12 @@ def main():
         st.markdown("### 🐛 Устранение неполадок")
 
         issues = [
-            ("Веб-камера не работает", "Проверьте разрешения браузера для доступа к камере. Попробуйте обновить страницу."),
+            ("Веб-камера не работает",
+             "Проверьте разрешения браузера для доступа к камере. Попробуйте обновить страницу."),
             ("Лица не обнаруживаются", "Настройте параметр уверенности детекции. Убедитесь в хорошем освещении."),
             ("Медленная работа", "Попробуйте уменьшить разрешение видео или частоту кадров."),
-            ("Ошибки импорта", "Убедитесь, что файл face_detection_and_emotion_recognition.py находится в текущей директории."),
+            ("Ошибки импорта",
+             "Убедитесь, что файл face_detection_and_emotion_recognition.py находится в текущей директории."),
             ("Низкий FPS", "Модель может быть вычислительно затратной. Попробуйте использовать компьютер с GPU."),
         ]
 

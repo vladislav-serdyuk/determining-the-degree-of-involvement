@@ -3,8 +3,9 @@
 для расчёта метрики вовлечённости
 """
 
-import numpy as np
 from collections import deque
+
+import numpy as np
 
 # Индексы landmarks для правого глаза (6 точек)
 # Порядок: [P1, P2, P3, P4, P5, P6]
@@ -33,8 +34,8 @@ class EyeAspectRatioAnalyzer:
 
         # История для детекции моргания (для каждого лица отдельно)
         self.blink_counters = {}  # {face_id: counter}
-        self.blink_totals = {}    # {face_id: total_blinks}
-        self.ear_history = {}     # {face_id: deque([ear_values])}
+        self.blink_totals = {}  # {face_id: total_blinks}
+        self.ear_history = {}  # {face_id: deque([ear_values])}
 
         print(f"EyeAspectRatioAnalyzer инициализирован: threshold={ear_threshold}, frames={consec_frames}")
 
@@ -73,14 +74,13 @@ class EyeAspectRatioAnalyzer:
         else:
             return 0.0
 
-
     def _get_eye_coordinates(self, landmarks, eye_indices: list[int], w: int, h: int) -> list[tuple[float, float]]:
         """Извлечение координат глаза из landmarks"""
 
         return [(landmarks[idx].x * w, landmarks[idx].y * h) for idx in eye_indices]
 
-
-    def analyze(self, face_landmarks, image_width: int, image_height: int, face_id: int = 0) -> dict[str, float | int | bool] | None:
+    def analyze(self, face_landmarks, image_width: int, image_height: int, face_id: int = 0) -> dict[
+                                                                                                    str, float | int | bool] | None:
         """
         Анализирует состояние глаз на основе landmarks (для одного лица).
 
@@ -175,12 +175,12 @@ def classify_attention_by_ear(avg_ear: float, blink_rate: float) -> str:
 
     if avg_ear >= 0.30:
         if 10 <= blink_rate <= 25:
-            return "Alert"          # Нормальное состояние (внимательность, сосредоточненность)
+            return "Alert"  # Нормальное состояние (внимательность, сосредоточненность)
         else:
-            return "Normal"         # Немного отклонения (обычные, открытые глаза)
+            return "Normal"  # Немного отклонения (обычные, открытые глаза)
     elif 0.25 <= avg_ear < 0.30:
-        return "Normal"             # Пограничное состояние (так же принимаем за нормальное)
+        return "Normal"  # Пограничное состояние (так же принимаем за нормальное)
     elif 0.20 <= avg_ear < 0.25:
-        return "Drowsy"             # Начало усталости (читаемая усталость)
+        return "Drowsy"  # Начало усталости (читаемая усталость)
     else:
-        return "Very Drowsy"        # Глаза почти закрыты (сильная усталость)
+        return "Very Drowsy"  # Глаза почти закрыты (сильная усталость)
