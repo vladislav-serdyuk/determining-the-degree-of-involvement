@@ -1,46 +1,60 @@
 import base64
-import tempfile
 import warnings
 
 import cv2
-import torch
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, status
+import numpy as np
+from cv2 import error
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
-from video_processing import AttentionAnalyzer, FaceDetector, EmotionRecognizer, \
-    EyeAspectRatioAnalyzer, HeadPoseEstimator
+from models import models
+from video_processing import FaceAnalysisPipeline
 
 stream_router = APIRouter()
-face_detector = FaceDetector(min_detection_confidence=0.5)
-emotion_recognizer = EmotionRecognizer(device='cuda' if torch.cuda.is_available() else 'cpu', window_size=15,
-                                       confidence_threshold=0.55, ambiguity_threshold=0.15)
-eye_analyzer = EyeAspectRatioAnalyzer()
-head_analyzer = HeadPoseEstimator()
-face_detector_and_emotion_recognizer = AttentionAnalyzer(face_detector, emotion_recognizer, eye_analyzer, head_analyzer)
+
+
+def convert_to_serializable(obj):
+    """Recursively converts numpy types to Python native types for JSON serialization"""
+    if isinstance(obj, dict):
+        return {k: convert_to_serializable(v) for k, v in obj.items()}
+    elif isinstance(obj, (list, tuple)):
+        return [convert_to_serializable(item) for item in obj]
+    elif isinstance(obj, np.integer):
+        return int(obj)
+    elif isinstance(obj, np.floating):
+        return float(obj)
+    elif isinstance(obj, np.bool_):
+        return bool(obj)
+    elif isinstance(obj, np.ndarray):
+        return obj.tolist()
+    else:
+        return obj
 
 
 @stream_router.websocket('/ws/stream')
 async def stream(websocket: WebSocket):
+    analyzer: FaceAnalysisPipeline = models['analyzer']
     await websocket.accept()
     try:
         while True:
             data = await websocket.receive_json()  # TODO add validation
             image_b64 = data.get("image")
-            image_bytes = base64.b64decode(image_b64)
-            with tempfile.TemporaryFile() as tmp_img_file:
-                tmp_img_file.write(image_bytes)
-                img = cv2.imread(tmp_img_file.name)
-            if img is None:
-                await websocket.close(status.WS_1011_INTERNAL_ERROR)
-                warnings.warn('Could not read img from fs in /ws/stream')
+            try:
+                image_bytes = base64.b64decode(image_b64)
+                nparr = np.frombuffer(image_bytes, np.uint8)
+                img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+            except (ValueError, TypeError, error) as e:
+                await websocket.send_json({"error": f"Failed to decode image: {str(e)}"})
                 continue
-            new_img, results = face_detector_and_emotion_recognizer.analyze(img)
-            with tempfile.TemporaryFile() as tmp_img_file:
-                cv2.imwrite(tmp_img_file.name, new_img)
-                new_img_bytes = tmp_img_file.read()
-            img_base64 = base64.b64encode(new_img_bytes)
+            if img is None:
+                warnings.warn('Could not decode img /ws/stream')
+                continue
+            new_img, results = analyzer.analyze(img)
+            _, buffer = cv2.imencode('.jpg', new_img)
+            img_base64 = base64.b64encode(buffer).decode('utf-8')
+            results_serializable = convert_to_serializable(results)
             await websocket.send_json({
                 'image': img_base64,
-                'results': results
+                'results': results_serializable
             })
     except WebSocketDisconnect:
         pass
