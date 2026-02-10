@@ -1,10 +1,9 @@
 import cv2
 
-from . import mp_face_mesh
 from .analyze_ear import EyeAspectRatioAnalyzer, classify_attention_by_ear
 from .analyze_emotion import EmotionRecognizer
 from .analyze_head_pose import HeadPoseEstimator, classify_attention_state
-from .face_detection import FaceDetector, EAR_AVAILABLE
+from .face_detection import FaceDetector, EAR_AVAILABLE, mp_face_mesh
 
 
 class FaceAnalysisPipeline:
