@@ -12,7 +12,7 @@ import streamlit as st
 import torch
 from PIL import Image
 
-sys.path.append('server_app/')
+sys.path.append('../server_app/')
 
 try:
     from video_processing import (
