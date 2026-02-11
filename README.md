@@ -10,7 +10,7 @@ Real-time emotion detection system with FastAPI backend and Streamlit frontend.
 ## Quick Start
 
 ### Docker Compose
-
+> You need to install nvidia-container-toolkit to support cuda
 ```bash
 # Run backend
 cd server_app
@@ -33,4 +33,6 @@ cd streamlit_app && streamlit run emotion_detection_app.py
 
 ## Tech Stack
 
-- MediaPipe (face detection), PyTorch (emotion recognition), OpenCV (video processing)
+- MediaPipe (face detection)
+- PyTorch (emotion recognition)
+- OpenCV (video processing)
