@@ -8,6 +8,7 @@ from datetime import datetime
 
 import cv2
 import mediapipe as mp
+import torch
 
 from video_processing import EmotionRecognizer
 from video_processing.analyze_ear import EyeAspectRatioAnalyzer, classify_attention_by_ear, LEFT_EYE_LANDMARKS, \
@@ -343,7 +344,7 @@ def main():
     # Проверка CUDA
     device = 'cpu'
     try:
-        if cv2.cuda.getCudaEnabledDeviceCount() > 0:
+        if torch.cuda.is_available():
             device = 'cuda'
             print(f"CUDA доступна, используем GPU")
             log_file.write(f"\nDevice: CUDA (GPU)\n")
