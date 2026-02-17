@@ -22,11 +22,11 @@ HEAD_POSE_LANDMARKS = [1, 33, 61, 199, 263, 291]
 # Эти координаты представляют усреднённую модель человеческого лица
 MODEL_POINTS_3D = np.array([
     (0.0, 0.0, 0.0),  # Nose tip
-    (225.0, 170.0, -135.0),  # Right eye corner
-    (150.0, -150.0, -125.0),  # Right mouth corner
-    (0.0, -330.0, -65.0),  # Chin
-    (-225.0, 170.0, -135.0),  # Left eye corner
-    (-150.0, -150.0, -125.0),  # Left mouth corner
+    (225.0, 170.0, 135.0),  # Left eye corner
+    (150.0, -150.0, 125.0),  # Left mouth corner
+    (0.0, -330.0, 65.0),  # Chin
+    (-225.0, 170.0, 135.0),  # Right eye corner
+    (-150.0, -150.0, 125.0),  # Right mouth corner
 ], dtype=np.float64)
 
 

@@ -1,18 +1,22 @@
 """
 Тестовый скрипт для проверки Face Mesh pipeline с Head Pose и EAR
 """
-
+import os
+import sys
 import time
 from collections import deque
 from datetime import datetime
 
 import cv2
 import mediapipe as mp
+import torch
 
 from video_processing import EmotionRecognizer
 from video_processing.analyze_ear import EyeAspectRatioAnalyzer, classify_attention_by_ear, LEFT_EYE_LANDMARKS, \
     RIGHT_EYE_LANDMARKS
 from video_processing.analyze_head_pose import HeadPoseEstimator, classify_attention_state, HEAD_POSE_LANDMARKS
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'server_app'))
 
 # Инициализация MediaPipe (в этом скрипте отдельная реализация детектора лица через Face Mesh)
 mp_face_mesh = mp.solutions.face_mesh
@@ -343,7 +347,7 @@ def main():
     # Проверка CUDA
     device = 'cpu'
     try:
-        if cv2.cuda.getCudaEnabledDeviceCount() > 0:
+        if torch.cuda.is_available():
             device = 'cuda'
             print(f"CUDA доступна, используем GPU")
             log_file.write(f"\nDevice: CUDA (GPU)\n")
