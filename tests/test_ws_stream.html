@@ -73,12 +73,37 @@
             color: #666;
             margin: 5px 0;
         }
+        .connection-info {
+            font-size: 14px;
+            color: #666;
+            margin: 5px 0;
+            padding: 10px;
+            background: #e9ecef;
+            border-radius: 4px;
+        }
     </style>
 </head>
 <body>
-<h1>WebSocket Stream Test - /ws/stream</h1>
+<h1>WebSocket Stream Test - /ws/rooms/{room_id}/stream</h1>
 
 <div class="disconnected" id="status">Status: Disconnected</div>
+
+<div class="connection-info" id="connectionInfo">Connection URL: -</div>
+
+<div class="controls">
+    <div class="slider-group">
+        <label>Server Address:</label>
+        <input id="serverAddress" style="flex:1; padding: 5px;" type="text" value="localhost:8000">
+    </div>
+    <div class="slider-group">
+        <label>Room ID:</label>
+        <input id="roomId" style="flex:1; padding: 5px;" type="text" value="test_room">
+    </div>
+    <div class="slider-group">
+        <label>Client Name:</label>
+        <input id="clientName" style="flex:1; padding: 5px;" type="text" value="test_client">
+    </div>
+</div>
 
 <div class="controls">
     <button id="connectBtn">Connect</button>
@@ -153,6 +178,7 @@
     const qualityValue = document.getElementById('qualityValue');
     const actualSendFps = document.getElementById('actualSendFps');
     const actualReceiveFps = document.getElementById('actualReceiveFps');
+    const connectionInfo = document.getElementById('connectionInfo');
 
     let ws = null;
     let isStreaming = false;
@@ -163,7 +189,9 @@
     let lastReceiveTime = Date.now();
     let receiveCount = 0;
 
-    const SERVER_URL = 'ws://' + 'localhost:8000';
+    const serverAddress = document.getElementById('serverAddress');
+    const roomIdInput = document.getElementById('roomId');
+    const clientNameInput = document.getElementById('clientName');
 
     resolutionSlider.addEventListener('input', () => {
         const w = parseInt(resolutionSlider.value);
@@ -209,16 +237,23 @@
     }
 
     connectBtn.addEventListener('click', () => {
-        ws = new WebSocket(SERVER_URL + '/ws/stream');
+        const serverUrl = 'ws://' + serverAddress.value;
+        const roomId = roomIdInput.value || 'test_room';
+        const clientName = clientNameInput.value;
+        const wsUrl = `${serverUrl}/ws/rooms/${roomId}/stream?name=${encodeURIComponent(clientName)}`;
+        
+        ws = new WebSocket(wsUrl);
 
         ws.onopen = () => {
             updateStatus('Connected', 'connected');
+            connectionInfo.textContent = 'Connection URL: ' + wsUrl;
             connectBtn.disabled = true;
             disconnectBtn.disabled = false;
         };
 
         ws.onclose = () => {
             updateStatus('Disconnected', 'disconnected');
+            connectionInfo.textContent = 'Connection URL: -';
             connectBtn.disabled = false;
             disconnectBtn.disabled = true;
             stopStreaming();

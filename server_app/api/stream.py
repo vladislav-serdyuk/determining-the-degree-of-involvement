@@ -1,12 +1,16 @@
+import asyncio
 import base64
 import warnings
+from typing import Annotated
+from uuid import uuid4, UUID
 
 import cv2
 import numpy as np
 from cv2 import error
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, status, Query
 
 from models import models
+from services.room import RoomService, Client, RoomNotFoundError, ClientNotFoundError, get_room_service
 from video_processing import FaceAnalysisPipeline
 
 stream_router = APIRouter()
@@ -30,13 +34,17 @@ def convert_to_serializable(obj):
         return obj
 
 
-@stream_router.websocket('/ws/stream')
-async def stream(websocket: WebSocket):
+@stream_router.websocket('/ws/rooms/{room_id}/stream')
+async def stream(websocket: WebSocket, room_id: str,
+                 name: Annotated[str | None, Query(max_length=30)] = None,
+                 room_service: RoomService = Depends(get_room_service)):
     analyzer: FaceAnalysisPipeline = models['analyzer']
     await websocket.accept()
+    client: Client = Client(id_=uuid4(), name=name)
+    await room_service.add_client(room_id, client)
     try:
         while True:
-            data = await websocket.receive_json()  # TODO add validation
+            data = await websocket.receive_json()
             image_b64 = data.get("image")
             try:
                 image_bytes = base64.b64decode(image_b64)
@@ -49,6 +57,9 @@ async def stream(websocket: WebSocket):
                 warnings.warn('Could not decode img /ws/stream')
                 continue
             new_img, results = analyzer.analyze(img)
+            client.src_frame = img
+            client.prc_frame = new_img
+            client.metrics = results
             _, buffer = cv2.imencode('.jpg', new_img)
             img_base64 = base64.b64encode(buffer).decode('utf-8')
             results_serializable = convert_to_serializable(results)
@@ -56,5 +67,41 @@ async def stream(websocket: WebSocket):
                 'image': img_base64,
                 'results': results_serializable
             })
+    except WebSocketDisconnect:
+        pass
+    finally:
+        await room_service.remove_client(room_id, client)
+
+
+@stream_router.websocket('/ws/rooms/{room_id}/clients/{client_id}/output_stream')
+async def client_stream(websocket: WebSocket, room_id: str, client_id: UUID,
+                        room_service: RoomService = Depends(get_room_service)):
+    await websocket.accept()
+    try:
+        client = await room_service.get_client(room_id, client_id)
+    except (RoomNotFoundError, ClientNotFoundError) as e:
+        await websocket.send_json({"error": str(e)})
+        await websocket.close(status.WS_1008_POLICY_VIOLATION)
+        return
+    try:
+        while True:
+            img = client.src_frame
+            new_img = client.prc_frame
+            results = client.metrics
+            if img is None or new_img is None:
+                await asyncio.sleep(0.05)
+                continue
+            _, buffer = cv2.imencode('.jpg', img)
+            img_src_base64 = base64.b64encode(buffer).decode('utf-8')
+            _, buffer = cv2.imencode('.jpg', new_img)
+            img_base64 = base64.b64encode(buffer).decode('utf-8')
+            results_serializable = convert_to_serializable(results)
+            await websocket.send_json({
+                'image_src': img_src_base64,
+                'image': img_base64,
+                'results': results_serializable
+            })
+            await asyncio.sleep(0.05)
+
     except WebSocketDisconnect:
         pass
