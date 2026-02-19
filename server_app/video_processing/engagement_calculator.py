@@ -34,6 +34,21 @@ class EngagementCalculator:
         'head_pose': 0.25   # Ориентация головы (pitch, yaw)
     }
 
+    # Маппинг состояния глаз → score (пороги определены в analyze_ear.classify_attention_by_ear)
+    EAR_STATE_SCORES = {
+        'Alert': 1.0,       # avg_ear >= 0.30
+        'Normal': 0.7,      # avg_ear >= 0.25
+        'Drowsy': 0.4,      # avg_ear >= 0.20
+        'Very Drowsy': 0.1  # avg_ear < 0.20
+    }
+
+    # Маппинг позы головы → score (пороги определены в analyze_head_pose.classify_attention_state)
+    HEAD_POSE_STATE_SCORES = {
+        'Highly Attentive': 1.0,  # |pitch| < 10, |yaw| < 15
+        'Attentive': 0.8,         # |pitch| < 20, |yaw| < 25
+        'Distracted': 0.5,        # |pitch| < 30, |yaw| < 40
+        'Very Distracted': 0.2    # иначе
+    }
 
     # Пороговые значения для классификации вовлечённости
     THRESHOLDS = {
@@ -126,7 +141,10 @@ class EngagementCalculator:
         elapsed_time: Optional[float] = None
     ) -> float:
         """
-        Вычисление eye_score на основе EAR и частоты моргания
+        Вычисление eye_score на основе EAR и частоты моргания.
+
+        Использует предвычисленный attention_state из FaceAnalysisPipeline (EAR_STATE_SCORES).
+        Если attention_state отсутствует, применяется fallback по значению avg_ear.
 
         Args:
             ear_data: Словарь с данными EAR
@@ -142,19 +160,24 @@ class EngagementCalculator:
         Returns:
             Eye score (0.0-1.0)
         """
-        avg_ear = ear_data.get('avg_ear', 0.25)
         blink_count = ear_data.get('blink_count', 0)
 
-        # Базовый score по EAR (пороги из литературы)
-        # TODO: перенести ответственность на analyze_ear модуль
-        if avg_ear >= 0.30:
-            base_score = 1.0    # Alert: глаза широко открыты
-        elif avg_ear >= 0.25:
-            base_score = 0.7    # Normal: нормальное открытие
-        elif avg_ear >= 0.20:
-            base_score = 0.4    # Drowsy: начало усталости
+        # Базовый score по attention_state (вычислен в FaceAnalysisPipeline через classify_attention_by_ear)
+        attention_state = ear_data.get('attention_state')
+        if attention_state is not None:
+            base_score = self.EAR_STATE_SCORES.get(attention_state, 0.5)
         else:
-            base_score = 0.1    # Very Drowsy: глаза почти закрыты
+            # Fallback: прямой расчёт по avg_ear (пороги из литературы)
+            # Источник: Dewi et al. (2022)
+            avg_ear = ear_data.get('avg_ear', 0.25)
+            if avg_ear >= 0.30:
+                base_score = 1.0    # Alert: глаза широко открыты
+            elif avg_ear >= 0.25:
+                base_score = 0.7    # Normal: нормальное открытие
+            elif avg_ear >= 0.20:
+                base_score = 0.4    # Drowsy: начало усталости
+            else:
+                base_score = 0.1    # Very Drowsy: глаза почти закрыты
 
 
         # Модификатор по частоте моргания
@@ -184,7 +207,10 @@ class EngagementCalculator:
         head_pose_data: Dict[str, Any]
     ) -> float:
         """
-        Вычисление head_pose_score на основе углов Эйлера
+        Вычисление head_pose_score на основе позы головы.
+
+        Использует предвычисленный attention_state из FaceAnalysisPipeline (HEAD_POSE_STATE_SCORES).
+        Если attention_state отсутствует, применяется fallback по углам Эйлера.
 
         Args:
             head_pose_data: Словарь с данными позы головы
@@ -198,14 +224,18 @@ class EngagementCalculator:
         Returns:
             Head pose score (0.0-1.0)
         """
+        # Базовый score по attention_state (вычислен в FaceAnalysisPipeline через classify_attention_state)
+        attention_state = head_pose_data.get('attention_state')
+        if attention_state is not None:
+            return self.HEAD_POSE_STATE_SCORES.get(attention_state, 0.5)
+
+        # Fallback: прямой расчёт по углам Эйлера
+        # Источник: Gupta et al. (2023), Raca & Dillenbourg (2015)
         pitch = head_pose_data.get('pitch', 0.0)
         yaw = head_pose_data.get('yaw', 0.0)
 
         abs_pitch = abs(pitch)
         abs_yaw = abs(yaw)
-
-        # Пороговые значения из литературы
-        # Источник: Gupta et al. (2023), Raca & Dillenbourg (2015)
 
         if abs_pitch < 10 and abs_yaw < 15:
             # Highly Attentive: прямой взгляд на экран
