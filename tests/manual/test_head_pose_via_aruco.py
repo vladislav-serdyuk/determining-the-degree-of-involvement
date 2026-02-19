@@ -6,9 +6,8 @@ import cv2
 import mediapipe as mp
 import numpy as np
 
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../..', 'server_app'))
 from video_processing.analyze_head_pose import HeadPoseEstimator
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'server_app'))
 
 ARUCO_DICT = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
 ARUCO_PARAMS = cv2.aruco.DetectorParameters()
