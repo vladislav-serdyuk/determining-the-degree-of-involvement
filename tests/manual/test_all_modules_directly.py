@@ -12,7 +12,7 @@ import cv2
 import mediapipe as mp
 import torch
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../..', 'server_app'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../backend/app/'))
 from services.video_processing import EmotionRecognizer
 from services.video_processing.analyze_ear import EyeAspectRatioAnalyzer, LEFT_EYE_LANDMARKS, \
     RIGHT_EYE_LANDMARKS

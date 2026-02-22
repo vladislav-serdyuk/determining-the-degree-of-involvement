@@ -119,7 +119,7 @@ class FaceDetector:
 
 
 if __name__ == '__main__':
-    from services.video_processing.video_stream import process_video_stream
+    from app.services.video_processing.video_stream import process_video_stream
 
     print('Using camera 0')
     cap = cv2.VideoCapture(0)
