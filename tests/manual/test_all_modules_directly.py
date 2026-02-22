@@ -52,12 +52,7 @@ class FaceMeshAnalyzer:
         # Анализаторы
         self.head_pose_estimator = HeadPoseEstimator()
         self.ear_analyzer = EyeAspectRatioAnalyzer(ear_threshold=0.25, consec_frames=3)
-        self.emotion_recognizer = EmotionRecognizer(
-            device=device,
-            window_size=15,
-            confidence_threshold=0.55,
-            ambiguity_threshold=0.15
-        )
+        self.emotion_recognizer = EmotionRecognizer(window_size=15, confidence_threshold=0.55, ambiguity_threshold=0.15)
 
         # Состояние визуализации точек (визуализация+дебаг): 0=off, 1=key points, 2=all points
         self.landmark_viz_mode = 0
@@ -358,7 +353,7 @@ def main():
     log_file.flush()
 
     # Инициализация анализатора
-    analyzer = FaceMeshAnalyzer(device=device)
+    analyzer = FaceMeshAnalyzer()
 
     # Открытие веб-камеры
     cap = cv2.VideoCapture(0)

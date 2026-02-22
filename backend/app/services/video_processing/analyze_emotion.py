@@ -1,10 +1,9 @@
 from collections import deque
 from dataclasses import dataclass
-from typing import Literal
 
 import cv2
 import torch
-from emotiefflib.facial_analysis import get_model_list, EmotiEffLibRecognizer
+from emotiefflib.facial_analysis import  EmotiEffLibRecognizer
 
 
 @dataclass
@@ -16,33 +15,25 @@ class EmotionRecognizeResult:
 class EmotionRecognizer:
     """Распознавание с temporal smoothing + confidence thresholding"""
 
-    def __init__(self, *, device: Literal['cpu', 'cuda'] = 'cpu', window_size=15,
-                 confidence_threshold=0.55, ambiguity_threshold=0.15,
-                 model_name='enet_b2_8'):
+    model_name = 'enet_b2_8' # TODO to config
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    recognizer = EmotiEffLibRecognizer(
+        model_name=model_name,
+        device=device
+    )
+    print(f"EmotiEffLib + Advanced загружен: модель={model_name}, устройство={device}")
+
+    def __init__(self, *, window_size=15, confidence_threshold=0.55, ambiguity_threshold=0.15):
         """
         Args:
-            device: 'cpu' или 'cuda'. Не меняется после инициализации
             window_size: Размер окна для сглаживания
             confidence_threshold: Минимальный порог уверенности
             ambiguity_threshold: Порог для амбивалентных эмоций
-            model_name: Имя модели
         """
-        if not isinstance(device, str):
-            raise TypeError(f'Type of "device" should be str, got {type(device).__name__}')
-        if device not in ['cpu', 'cuda']:
-            raise ValueError(f'"device" should be "cpu" or "cuda". Got "{device}"')
         self._validate_window_size(window_size)
         self._validate_confidence_threshold(confidence_threshold)
         self._validate_ambiguity_threshold(ambiguity_threshold)
-        if not isinstance(model_name, str):
-            raise TypeError(f'Type of "model_name" should be str, got {type(model_name).__name__}')
-        if model_name not in get_model_list():
-            raise ValueError(f'Unknown "model_name". Got "{model_name}". Available models: {get_model_list()}')
 
-        self.recognizer = EmotiEffLibRecognizer(
-            model_name=model_name,
-            device=device
-        )
         self.emotion_labels = ['Angry', 'Disgust', 'Fear', 'Happy',
                                'Sad', 'Surprise', 'Neutral', 'Contempt']
 
@@ -52,7 +43,6 @@ class EmotionRecognizer:
         # Параметры фильтрации
         self.confidence_threshold = confidence_threshold
         self.ambiguity_threshold = ambiguity_threshold
-        print(f"EmotiEffLib + Advanced загружен: модель={model_name}, устройство={device}")
 
     @staticmethod
     def _validate_window_size(window_size: int):

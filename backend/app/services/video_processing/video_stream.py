@@ -21,9 +21,8 @@ def process_video_stream(video_stream: cv2.VideoCapture,
     """
     use_inner_models = face_analyze_pipeline is None
     if use_inner_models:
-        face_detector = FaceDetector(min_detection_confidence=0.5)
-        emotion_recognizer = EmotionRecognizer(device='cuda' if torch.cuda.is_available() else 'cpu', window_size=15,
-                                               confidence_threshold=0.55, ambiguity_threshold=0.15)
+        face_detector = FaceDetector()
+        emotion_recognizer = EmotionRecognizer(window_size=15, confidence_threshold=0.55, ambiguity_threshold=0.15)
         face_analyze_pipeline = FaceAnalysisPipeline(face_detector, emotion_recognizer)
 
     if not video_stream.isOpened():
@@ -57,7 +56,5 @@ def process_video_stream(video_stream: cv2.VideoCapture,
                 emotions.append(emotion_dict)
             yield analysis_result.image, emotions
     finally:
-        if use_inner_models:
-            face_detector.close()
-            emotion_recognizer.reset()
-            del face_analyze_pipeline
+        if created_pipeline is not None:
+            created_pipeline.emotion_recognizer.reset()
