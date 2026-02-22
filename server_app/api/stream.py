@@ -18,7 +18,7 @@ stream_router = APIRouter()
 
 
 @stream_router.websocket('/ws/rooms/{room_id}/stream')
-async def stream(websocket: WebSocket, room_id: str,
+async def stream(websocket: WebSocket, room_id: Annotated[str, Query(max_length=40)],
                  name: Annotated[str | None, Query(max_length=30)] = None,
                  room_service: RoomService = Depends(get_room_service),
                  analyzer_service: FaceAnalysisPipelineService = Depends(get_face_analysis_pipeline_service)):
@@ -77,9 +77,9 @@ async def stream(websocket: WebSocket, room_id: str,
 
 
 @stream_router.websocket('/ws/rooms/{room_id}/clients/{client_id}/output_stream')
-async def client_stream(websocket: WebSocket, room_id: str, client_id: UUID,
+async def client_stream(websocket: WebSocket, room_id: Annotated[str, Query(max_length=40)], client_id: UUID,
                         room_service: RoomService = Depends(get_room_service)):
-    await websocket.accept()
+    await websocket.accept() # TODO
     try:
         client = await room_service.get_client(room_id, client_id)
     except (RoomNotFoundError, ClientNotFoundError) as e:
