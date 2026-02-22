@@ -37,19 +37,19 @@ class FaceDetectResult:
 class FaceDetector:
     """Модуль детекции лиц с использованием MediaPipe"""
 
-    def __init__(self, *, min_detection_confidence: float = 0.5, margin: int = 20):
+    min_detection_confidence  = 0.5
+    detector = mp_face_detection.FaceDetection( # TODO to config
+        model_selection=1,  # 1 = full-range model (до 5 метров)
+        min_detection_confidence=min_detection_confidence
+    )
+
+    def __init__(self, *, margin: int = 20):
         """
 
-        :param min_detection_confidence: Минимальный уровень уверенности модели, чтобы считать, что лицо есть
         :param margin: Добавочный отступ к bbox, предсказанный моделью
         """
         self._validate_margin(margin)
-        self._validate_confidence(min_detection_confidence)
 
-        self.detector = mp_face_detection.FaceDetection(
-            model_selection=1,  # 1 = full-range model (до 5 метров)
-            min_detection_confidence=min_detection_confidence
-        )
         self.margin = margin
 
     @staticmethod
@@ -63,14 +63,6 @@ class FaceDetector:
     def set_margin(self, margin: int):
         self._validate_margin(margin)
         self.margin = margin
-
-    @staticmethod
-    def _validate_confidence(confidence: float) -> None:
-        """Валидация min_detection_confidence"""
-        if not isinstance(confidence, (float, int)):
-            raise TypeError(f'Type of confidence should be float, got {type(confidence).__name__}')
-        if not 0 <= confidence <= 1:
-            raise ValueError(f'Confidence should be in [0, 1], got {confidence}')
 
     def set_min_detection_confidence(self, min_detection_confidence: float):
         self._validate_confidence(min_detection_confidence)
@@ -119,7 +111,7 @@ class FaceDetector:
 
 
 if __name__ == '__main__':
-    from app.services.video_processing.video_stream import process_video_stream
+    from services.video_processing.video_stream import process_video_stream
 
     print('Using camera 0')
     cap = cv2.VideoCapture(0)

@@ -88,16 +88,12 @@ class EmotionDetectionProcessor:
         try:
             if BACKEND_AVAILABLE:
                 # Детектор лиц
-                face_detector = FaceDetector(
-                    min_detection_confidence=params.get('min_detection_confidence', 0.5)
-                )
+                face_detector = FaceDetector()
 
                 # Распознаватель эмоций
-                emotion_recognizer = EmotionRecognizer(
-                    window_size=params.get('window_size', 15),
-                    confidence_threshold=params.get('confidence_threshold', 0.55),
-                    ambiguity_threshold=params.get('ambiguity_threshold', 0.15)
-                )
+                emotion_recognizer = EmotionRecognizer(window_size=params.get('window_size', 15),
+                                                       confidence_threshold=params.get('confidence_threshold', 0.55),
+                                                       ambiguity_threshold=params.get('ambiguity_threshold', 0.15))
 
                 # EAR анализатор (доп.)
                 ear_analyzer = None
@@ -905,15 +901,10 @@ def create_webcam_section():
                 if st.session_state.webcam_detector is None:
                     params = st.session_state.backend_params
 
-                    face_detector = FaceDetector(
-                        min_detection_confidence=params['min_detection_confidence']
-                    )
-                    emotion_recognizer = EmotionRecognizer(
-                        device='cuda' if torch.cuda.is_available() else 'cpu',
-                        window_size=params['window_size'],
-                        confidence_threshold=params['confidence_threshold'],
-                        ambiguity_threshold=params['ambiguity_threshold']
-                    )
+                    face_detector = FaceDetector()
+                    emotion_recognizer = EmotionRecognizer(window_size=params['window_size'],
+                                                           confidence_threshold=params['confidence_threshold'],
+                                                           ambiguity_threshold=params['ambiguity_threshold'])
 
                     # EAR анализатор (доп.)
                     ear_analyzer = None

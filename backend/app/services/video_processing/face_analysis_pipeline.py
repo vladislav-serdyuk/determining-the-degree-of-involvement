@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 
 import cv2
-import torch
 
 from .analyze_ear import EyeAspectRatioAnalyzer, EyeAspectRatioAnalyzeResult
 from .analyze_emotion import EmotionRecognizer
@@ -182,6 +181,6 @@ class FaceAnalysisPipeline:
 
 def make_face_analysis_pipeline() -> FaceAnalysisPipeline:
     return FaceAnalysisPipeline(face_detector=FaceDetector(),
-                                emotion_recognizer=EmotionRecognizer(
-                                    device='cuda' if torch.cuda.is_available() else 'cpu'),
-                                ear_analyzer=EyeAspectRatioAnalyzer(), head_pose_estimator=HeadPoseEstimator())
+                                emotion_recognizer=EmotionRecognizer(),
+                                ear_analyzer=EyeAspectRatioAnalyzer(),
+                                head_pose_estimator=HeadPoseEstimator())
