@@ -106,15 +106,7 @@ class EyeAspectRatioAnalyzer:
             face_id: ID лица для отслеживания истории моргания (по умолчанию 0)
 
         Returns:
-            Словарь с результатами анализа:  #TODO
-            {
-                'left_ear': float,      # EAR левого глаза
-                'right_ear': float,     # EAR правого глаза
-                'avg_ear': float,       # Средний EAR
-                'eyes_open': bool,      # Открыты ли глаза
-                'blink_count': int,     # Общее количество морганий
-                'is_blinking': bool     # Моргает ли сейчас
-            }
+            EyeAspectRatioAnalyzeResult, если лицо обнаружено
             None, если лицо не обнаружено
         """
         landmarks = face_landmarks.landmark
