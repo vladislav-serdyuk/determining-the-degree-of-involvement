@@ -7,7 +7,7 @@ import mediapipe as mp
 import numpy as np
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../..', 'server_app'))
-from video_processing.analyze_head_pose import HeadPoseEstimator
+from services.video_processing import HeadPoseEstimator
 
 ARUCO_DICT = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
 ARUCO_PARAMS = cv2.aruco.DetectorParameters()
@@ -118,9 +118,9 @@ def main():
             head_pose = head_pose_estimator.estimate(face_landmarks, image_width, image_height)
 
             if head_pose:
-                roll = head_pose['roll']
-                pitch = head_pose['pitch']
-                yaw = head_pose['yaw']
+                roll = head_pose.roll
+                pitch = head_pose.pitch
+                yaw = head_pose.yaw
 
                 color = (255, 0, 0) if aruco_results is None else (0, 255, 255)
                 cv2.putText(

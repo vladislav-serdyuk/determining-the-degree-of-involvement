@@ -4,6 +4,8 @@
 """
 
 from collections import deque
+from dataclasses import dataclass
+from typing import Literal
 
 import numpy as np
 
@@ -17,6 +19,18 @@ RIGHT_EYE_LANDMARKS = [33, 160, 158, 133, 153, 145]
 
 # Индексы landmarks для левого глаза (6 точек)
 LEFT_EYE_LANDMARKS = [362, 385, 387, 263, 373, 380]
+
+
+@dataclass
+class EyeAspectRatioAnalyzeResult:
+    left_ear: float  # EAR левого глаза
+    right_ear: float  # EAR правого глаза
+    avg_ear: float  # Средний EAR
+    eyes_open: bool  # Открыты ли глаза
+    blink_count: int  # Общее количество морганий
+    is_blinking: bool  # Моргает ли сейчас
+    ear_history: list[float]
+    attention_state: Literal["Alert", "Normal", "Drowsy", "Very Drowsy"]
 
 
 # TODO: донастройка параметров и порогов при практическом тесте механизма
@@ -35,7 +49,7 @@ class EyeAspectRatioAnalyzer:
         # История для детекции моргания (для каждого лица отдельно)
         self.blink_counters = {}  # {face_id: counter}
         self.blink_totals = {}  # {face_id: total_blinks}
-        self.ear_history = {}  # {face_id: deque([ear_values])}
+        self.ear_history: dict[int, deque[float]] = {}  # {face_id: deque([ear_values])}
 
         print(f"EyeAspectRatioAnalyzer инициализирован: threshold={ear_threshold}, frames={consec_frames}")
 
@@ -70,17 +84,18 @@ class EyeAspectRatioAnalyzer:
 
         # EAR формула
         if C > 0:
-            return (A + B) / (2.0 * C)
+            return float((A + B) / (2.0 * C))
         else:
             return 0.0
 
-    def _get_eye_coordinates(self, landmarks, eye_indices: list[int], w: int, h: int) -> list[tuple[float, float]]:
+    @staticmethod
+    def _get_eye_coordinates(landmarks, eye_indices: list[int], w: int, h: int) -> list[tuple[float, float]]:
         """Извлечение координат глаза из landmarks"""
 
         return [(landmarks[idx].x * w, landmarks[idx].y * h) for idx in eye_indices]
 
-    def analyze(self, face_landmarks, image_width: int, image_height: int, face_id: int = 0) -> dict[
-                                                                                                    str, float | int | bool] | None:
+    def analyze(self, face_landmarks, image_width: int, image_height: int,
+                face_id: int = 0) -> EyeAspectRatioAnalyzeResult | None:
         """
         Анализирует состояние глаз на основе landmarks (для одного лица).
 
@@ -91,7 +106,7 @@ class EyeAspectRatioAnalyzer:
             face_id: ID лица для отслеживания истории моргания (по умолчанию 0)
 
         Returns:
-            Словарь с результатами анализа:
+            Словарь с результатами анализа:  #TODO
             {
                 'left_ear': float,      # EAR левого глаза
                 'right_ear': float,     # EAR правого глаза
@@ -134,15 +149,14 @@ class EyeAspectRatioAnalyzer:
                 self.blink_totals[face_id] += 1
             self.blink_counters[face_id] = 0
 
-        return {
-            'left_ear': left_ear,
-            'right_ear': right_ear,
-            'avg_ear': avg_ear,
-            'eyes_open': avg_ear >= self.ear_threshold,
-            'blink_count': self.blink_totals[face_id],
-            'is_blinking': is_blinking,
-            'ear_history': list(self.ear_history[face_id])
-        }
+        return EyeAspectRatioAnalyzeResult(left_ear=left_ear, right_ear=right_ear, avg_ear=avg_ear,
+                                           eyes_open=avg_ear >= self.ear_threshold,
+                                           blink_count=self.blink_totals[face_id],
+                                           is_blinking=is_blinking, ear_history=list(self.ear_history[face_id]),
+                                           attention_state=classify_attention_by_ear(
+                                               avg_ear,
+                                               self.blink_totals[face_id]
+                                           ))
 
     def reset(self, face_id: int = None):
         """Сброс счётчиков моргания"""
@@ -158,7 +172,7 @@ class EyeAspectRatioAnalyzer:
             self.ear_history.pop(face_id, None)
 
 
-def classify_attention_by_ear(avg_ear: float, blink_rate: float) -> str:
+def classify_attention_by_ear(avg_ear: float, blink_rate: float) -> Literal["Alert", "Normal", "Drowsy", "Very Drowsy"]:
     """
     Классификация состояния внимания на основе EAR и частоты моргания.
 

@@ -6,16 +6,17 @@ import sys
 import time
 from collections import deque
 from datetime import datetime
+from typing import Literal, Any
 
 import cv2
 import mediapipe as mp
 import torch
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../..', 'server_app'))
-from video_processing import EmotionRecognizer
-from video_processing.analyze_ear import EyeAspectRatioAnalyzer, classify_attention_by_ear, LEFT_EYE_LANDMARKS, \
+from services.video_processing import EmotionRecognizer
+from services.video_processing.analyze_ear import EyeAspectRatioAnalyzer, LEFT_EYE_LANDMARKS, \
     RIGHT_EYE_LANDMARKS
-from video_processing.analyze_head_pose import HeadPoseEstimator, classify_attention_state, HEAD_POSE_LANDMARKS
+from services.video_processing import HeadPoseEstimator, HEAD_POSE_LANDMARKS
 
 # Инициализация MediaPipe (в этом скрипте отдельная реализация детектора лица через Face Mesh)
 mp_face_mesh = mp.solutions.face_mesh
@@ -32,7 +33,7 @@ class FaceMeshAnalyzer:
     Head Pose, EAR и Emotion Recognition
     """
 
-    def __init__(self, device='cpu'):
+    def __init__(self, device: Literal['cpu', 'cuda'] = 'cpu'):
         """
         Args:
             device: 'cpu' или 'cuda' для emotion recognizer
@@ -159,7 +160,7 @@ class FaceMeshAnalyzer:
         mesh_results = self.face_mesh.process(rgb_image)
         rgb_image.flags.writeable = True
 
-        results = {
+        results: dict[str, Any] = {
             'face_detected': False,
             'bbox': None,
             'emotion': None,
@@ -180,17 +181,14 @@ class FaceMeshAnalyzer:
 
             # 3) Распознавание эмоции
             if face_crop.size > 0:
-                emotion, conf = self.emotion_recognizer.predict(face_crop)
-                results['emotion'] = emotion
-                results['emotion_confidence'] = conf
+                prediction = self.emotion_recognizer.predict(face_crop)
+                results['emotion'] = prediction.label
+                results['emotion_confidence'] = prediction.confidence
 
             # 4) Вычисление Head Pose Estimation 
             head_pose = self.head_pose_estimator.estimate(face_landmarks, w, h)
             if head_pose:
                 results['head_pose'] = head_pose
-                results['head_pose']['attention_state'] = classify_attention_state(
-                    head_pose['pitch'], head_pose['yaw'], head_pose['roll']
-                )
 
             # 5) Вычисление Eye Aspect Ratio (EAR)
             # по умолчанию задан ID лица с индексом 0 для отслеживания в историю
@@ -198,9 +196,8 @@ class FaceMeshAnalyzer:
             if ear_result:
                 # Расчёт частоты моргания (предполагаемые ~30 FPS)
                 # TODO: уточнить метрику
-                blink_rate = ear_result['blink_count'] * 2
+                blink_rate = ear_result.blink_count * 2
                 results['eyes'] = ear_result
-                results['eyes']['attention_state'] = classify_attention_by_ear(ear_result['avg_ear'], blink_rate)
 
             results['face_detected'] = True
 
@@ -240,12 +237,12 @@ class FaceMeshAnalyzer:
             # Head Pose
             if results['head_pose']:
                 hp = results['head_pose']
-                pose_text = f"P:{hp['pitch']:.1f} Y:{hp['yaw']:.1f} R:{hp['roll']:.1f}"
+                pose_text = f"P:{hp.pitch:.1f} Y:{hp.yaw:.1f} R:{hp.roll:.1f}"
                 cv2.putText(image, pose_text, (x1, y_offset),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
                 y_offset -= 20
 
-                attention_text = f"Att: {hp['attention_state']}"
+                attention_text = f"Att: {hp.attention_state}"
                 cv2.putText(image, attention_text, (x1, y_offset),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
                 y_offset -= 20
@@ -253,12 +250,12 @@ class FaceMeshAnalyzer:
             # EAR
             if results['eyes']:
                 eyes = results['eyes']
-                ear_text = f"EAR:{eyes['avg_ear']:.2f} Blinks:{eyes['blink_count']}"
+                ear_text = f"EAR:{eyes.avg_ear:.2f} Blinks:{eyes.blink_count}"
                 cv2.putText(image, ear_text, (x1, y_offset),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
                 y_offset -= 20
 
-                eye_state_text = f"Eyes: {eyes['attention_state']}"
+                eye_state_text = f"Eyes: {eyes.attention_state}"
                 cv2.putText(image, eye_state_text, (x1, y_offset),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
 
@@ -299,22 +296,22 @@ def log_frame_results(log_file, frame_count, results, fps, timestamp):
         if results['head_pose']:
             hp = results['head_pose']
             log_file.write(f"\n[HEAD POSE]\n")
-            log_file.write(f"  Pitch (up/down): {hp['pitch']:>7.2f}°\n")
-            log_file.write(f"  Yaw (left/right): {hp['yaw']:>7.2f}°\n")
-            log_file.write(f"  Roll (tilt): {hp['roll']:>7.2f}°\n")
-            log_file.write(f"  Attention State: {hp['attention_state']}\n")
+            log_file.write(f"  Pitch (up/down): {hp.pitch:>7.2f}°\n")
+            log_file.write(f"  Yaw (left/right): {hp.yaw:>7.2f}°\n")
+            log_file.write(f"  Roll (tilt): {hp.roll:>7.2f}°\n")
+            log_file.write(f"  Attention State: {hp.attention_state}\n")
 
         # Eyes / EAR
         if results['eyes']:
             eyes = results['eyes']
             log_file.write(f"\n[EYE ANALYSIS]\n")
-            log_file.write(f"  Left EAR: {eyes['left_ear']:.4f}\n")
-            log_file.write(f"  Right EAR: {eyes['right_ear']:.4f}\n")
-            log_file.write(f"  Average EAR: {eyes['avg_ear']:.4f}\n")
-            log_file.write(f"  Eyes Open: {eyes['eyes_open']}\n")
-            log_file.write(f"  Is Blinking: {eyes['is_blinking']}\n")
-            log_file.write(f"  Total Blinks: {eyes['blink_count']}\n")
-            log_file.write(f"  Attention State: {eyes['attention_state']}\n")
+            log_file.write(f"  Left EAR: {eyes.left_ear:.4f}\n")
+            log_file.write(f"  Right EAR: {eyes.right_ear:.4f}\n")
+            log_file.write(f"  Average EAR: {eyes.avg_ear:.4f}\n")
+            log_file.write(f"  Eyes Open: {eyes.eyes_open}\n")
+            log_file.write(f"  Is Blinking: {eyes.is_blinking}\n")
+            log_file.write(f"  Total Blinks: {eyes.blink_count}\n")
+            log_file.write(f"  Attention State: {eyes.attention_state}\n")
     else:
         log_file.write("No face detected\n")
 
@@ -409,13 +406,13 @@ def main():
                     print(f"Emotion: {results['emotion']} ({results['emotion_confidence']:.2f})")
                 if results['head_pose']:
                     hp = results['head_pose']
-                    print(f"Head Pose: pitch={hp['pitch']:.1f}° yaw={hp['yaw']:.1f}° roll={hp['roll']:.1f}°")
-                    print(f"Attention (pose): {hp['attention_state']}")
+                    print(f"Head Pose: pitch={hp.pitch:.1f}° yaw={hp.yaw:.1f}° roll={hp.roll:.1f}°")
+                    print(f"Attention (pose): {hp.attention_state}")
                 if results['eyes']:
                     eyes = results['eyes']
-                    print(f"EAR: {eyes['avg_ear']:.3f} (L:{eyes['left_ear']:.3f} R:{eyes['right_ear']:.3f})")
-                    print(f"Eyes open: {eyes['eyes_open']}, Blinks: {eyes['blink_count']}")
-                    print(f"Attention (eyes): {eyes['attention_state']}")
+                    print(f"EAR: {eyes.avg_ear:.3f} (L:{eyes.left_ear:.3f} R:{eyes.right_ear:.3f})")
+                    print(f"Eyes open: {eyes.eyes_open}, Blinks: {eyes.blink_count}")
+                    print(f"Attention (eyes): {eyes.attention_state}")
 
             # Логирование в файл каждые 30 кадров
             if results['face_detected'] and frame_count % 30 == 0:

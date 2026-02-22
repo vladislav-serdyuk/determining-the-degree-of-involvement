@@ -1,6 +1,6 @@
 import torch
 
-from video_processing import FaceDetector, EmotionRecognizer, EyeAspectRatioAnalyzer, HeadPoseEstimator, \
+from services.video_processing import FaceDetector, EmotionRecognizer, EyeAspectRatioAnalyzer, HeadPoseEstimator, \
     FaceAnalysisPipeline
 
 models = {}

@@ -1,10 +1,11 @@
 import asyncio
 from dataclasses import dataclass
 from functools import lru_cache
-from typing import Any
 from uuid import UUID
 
 from cv2.typing import MatLike
+
+from services.video_processing.face_analysis_pipeline import OneFaceMetricsAnalizResult
 
 
 class RoomNotFoundError(Exception):
@@ -26,7 +27,7 @@ class Client:
     name: str | None = None
     src_frame: MatLike | None = None
     prc_frame: MatLike | None = None
-    metrics: Any | None = None
+    metrics: list[OneFaceMetricsAnalizResult] | None = None
 
 
 @dataclass

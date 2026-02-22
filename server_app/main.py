@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from api.room import room_router
 from api.stream import stream_router
-from models import load_models, close_models, models
+from services.video_processing.models import load_models, close_models, models
 
 
 @asynccontextmanager

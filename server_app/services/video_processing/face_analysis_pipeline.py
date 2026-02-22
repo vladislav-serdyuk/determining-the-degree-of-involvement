@@ -1,9 +1,26 @@
+from dataclasses import dataclass
+
 import cv2
 
-from .analyze_ear import EyeAspectRatioAnalyzer, classify_attention_by_ear
+from .analyze_ear import EyeAspectRatioAnalyzer, EyeAspectRatioAnalyzeResult
 from .analyze_emotion import EmotionRecognizer
-from .analyze_head_pose import HeadPoseEstimator, classify_attention_state
-from .face_detection import FaceDetector, EAR_AVAILABLE, mp_face_mesh
+from .analyze_head_pose import HeadPoseEstimator, HeadPoseEstimatResult
+from .face_detection import FaceDetector, mp_face_mesh
+
+
+@dataclass
+class OneFaceMetricsAnalizResult:
+    emotion: str
+    confidence: float
+    bbox: tuple[int, int, int, int]
+    ear: EyeAspectRatioAnalyzeResult | None
+    head_pose: HeadPoseEstimatResult | None
+
+
+@dataclass
+class FaceAnalizResult:
+    image: cv2.typing.MatLike
+    metrics: list[OneFaceMetricsAnalizResult]
 
 
 class FaceAnalysisPipeline:
@@ -66,7 +83,7 @@ class FaceAnalysisPipeline:
         elif not self.ear_analyzer:
             self._close_face_mesh()
 
-    def analyze(self, image: cv2.typing.MatLike) -> tuple[cv2.typing.MatLike, list[dict]]:
+    def analyze(self, image: cv2.typing.MatLike) -> FaceAnalizResult:
         """
         Детектирует лица и распознаёт эмоции (Опционально - EAR и HeadPose)
         :param image: Входное изображение с лицами для анализа
@@ -87,88 +104,76 @@ class FaceAnalysisPipeline:
 
         for face_idx, face in enumerate(faces):
             # 1. Распознавание эмоции
-            emotion, conf = self.emotion_recognizer.predict(face['crop'])
-            x1, y1, x2, y2 = face['bbox']
+            prediction = self.emotion_recognizer.predict(face.crop)
+            emotion = prediction.label
+            conf = prediction.confidence
 
-            result = {
-                'emotion': emotion,
-                'confidence': conf,
-                'bbox': (x1, y1, x2, y2)
-            }
+            x1, y1, x2, y2 = face.bbox
 
             # 2. EAR анализ (если доступен Face Mesh)
             if self.ear_analyzer and face_mesh_results and face_mesh_results.multi_face_landmarks:
                 if face_idx < len(face_mesh_results.multi_face_landmarks):
                     face_landmarks = face_mesh_results.multi_face_landmarks[face_idx]
                     ear_result = self.ear_analyzer.analyze(face_landmarks, w, h, face_idx)
-                    if ear_result and EAR_AVAILABLE:
-                        # Добавляем классификацию состояния внимания по EAR
-                        ear_result['attention_state'] = classify_attention_by_ear(
-                            ear_result['avg_ear'],
-                            ear_result['blink_count']
-                        )
-                    result['ear'] = ear_result
+                    ear = ear_result
                 else:
-                    result['ear'] = None
+                    ear = None
             else:
-                result['ear'] = None
+                ear = None
 
             # 3. HeadPose анализ (если доступен Face Mesh)
             if self.head_pose_estimator and face_mesh_results and face_mesh_results.multi_face_landmarks:
                 if face_idx < len(face_mesh_results.multi_face_landmarks):
                     face_landmarks = face_mesh_results.multi_face_landmarks[face_idx]
                     head_pose_result = self.head_pose_estimator.estimate(face_landmarks, w, h)
-                    if head_pose_result and EAR_AVAILABLE:
-                        # Добавляем классификацию состояния внимания
-                        head_pose_result['attention_state'] = classify_attention_state(
-                            head_pose_result['pitch'],
-                            head_pose_result['yaw'],
-                            head_pose_result['roll']
-                        )
-                    result['head_pose'] = head_pose_result
+                    head_pose = head_pose_result
                 else:
-                    result['head_pose'] = None
+                    head_pose = None
             else:
-                result['head_pose'] = None
+                head_pose = None
+
+            result = OneFaceMetricsAnalizResult(emotion=emotion, confidence=conf, bbox=(x1, y1, x2, y2),
+                                                ear=ear, head_pose=head_pose)
 
             # 4. Визуализация
             self._draw_face_info(vis_image, result)
 
             results.append(result)
 
-        return vis_image, results
+        return FaceAnalizResult(vis_image, results)
 
-    def _draw_face_info(self, image: cv2.typing.MatLike, result: dict):
+    @staticmethod
+    def _draw_face_info(image: cv2.typing.MatLike, result: OneFaceMetricsAnalizResult):
         """Отрисовывает информацию о лице на изображении"""
-        x1, y1, x2, y2 = result['bbox']
+        x1, y1, x2, y2 = result.bbox
 
         # Рисуем bbox
         cv2.rectangle(image, (x1, y1), (x2, y2), (255, 0, 255), 2)
 
         # Эмоция
-        emotion_text = f"{result['emotion']}: {result['confidence']:.2f}"
+        emotion_text = f"{result.emotion}: {result.confidence:.2f}"
         cv2.putText(image, emotion_text, (x1, y1 - 10),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 255), 2)
 
         # EAR (если доступен)
         y_offset = y1 - 30
-        if result['ear']:
-            ear_text = f"EAR: {result['ear']['avg_ear']:.3f}"
+        if result.ear:
+            ear_text = f"EAR: {result.ear.avg_ear:.3f}"
             cv2.putText(image, ear_text, (x1, y_offset),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 255, 255), 1)
             y_offset -= 15
 
-            if result['ear']['is_blinking']:
+            if result.ear.is_blinking:
                 blink_text = "BLINK"
                 cv2.putText(image, blink_text, (x1, y_offset),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 255), 1)
                 y_offset -= 15
 
         # HeadPose (если доступен)
-        if result['head_pose']:
-            pitch = result['head_pose']['pitch']
-            yaw = result['head_pose']['yaw']
-            roll = result['head_pose']['roll']
+        if result.head_pose:
+            pitch = result.head_pose.pitch
+            yaw = result.head_pose.yaw
+            roll = result.head_pose.roll
             head_pose_text = f"P:{pitch:.0f} Y:{yaw:.0f} R:{roll:.0f}"
             cv2.putText(image, head_pose_text, (x1, y_offset),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 0), 1)
