@@ -69,7 +69,7 @@ async def stream(websocket: WebSocket, room_service: Annotated[RoomService, Depe
 @stream_router.websocket('/ws/rooms/{room_id}/clients/{client_id}/output_stream')
 async def client_stream(websocket: WebSocket, room_id: Annotated[str, Path(max_length=40)], client_id: UUID,
                         room_service: Annotated[RoomService, Depends(get_room_service)]):
-    await websocket.accept() # TODO
+    await websocket.accept()
     try:
         client = await room_service.get_client(room_id, client_id)
     except (RoomNotFoundError, ClientNotFoundError) as e:
