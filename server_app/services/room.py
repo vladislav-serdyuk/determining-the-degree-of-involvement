@@ -28,6 +28,11 @@ class Client:
     src_frame: MatLike | None = None
     prc_frame: MatLike | None = None
     metrics: list[OneFaceMetricsAnalizResult] | None = None
+    _lock = asyncio.Lock()
+
+    @property
+    def lock(self):
+        return self._lock
 
 
 @dataclass
