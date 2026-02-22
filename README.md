@@ -15,7 +15,7 @@ Real-time emotion detection system with FastAPI backend and Streamlit frontend.
 
 ```bash
 # Run backend
-cd server_app
+cd backend
 docker compose up -d --build 
 ```
 
@@ -24,7 +24,7 @@ docker compose up -d --build
 #### Install dependencies
 
 ```bash
-cd server_app && pip install -r requirements.txt
+cd backend && pip install -r requirements.txt
 cd ../streamlit_app && pip install -r requirements.txt
 ```
 
@@ -41,10 +41,10 @@ python -3.12 -m venv venv
 
 ```bash
 # if global uvicorn installed
-cd server_app && uvicorn main:app --reload --host 0.0.0.0 --port 8000
+cd backend && uvicorn main:app --reload --host 0.0.0.0 --port 8000
 
 # from venv
-cd server_app && python -m uvicorn main:app --reload --host 0.0.0.0 --port 8000
+cd backend && python -m uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 ### Run frontend (another terminal)

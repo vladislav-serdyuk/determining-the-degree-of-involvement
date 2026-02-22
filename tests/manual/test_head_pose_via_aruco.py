@@ -6,7 +6,7 @@ import cv2
 import mediapipe as mp
 import numpy as np
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../..', 'server_app'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../backend/app/'))
 from services.video_processing import HeadPoseEstimator
 
 ARUCO_DICT = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
