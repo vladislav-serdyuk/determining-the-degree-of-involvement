@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
 import cv2
+import torch
 
 from .analyze_ear import EyeAspectRatioAnalyzer, EyeAspectRatioAnalyzeResult
 from .analyze_emotion import EmotionRecognizer
@@ -186,3 +187,10 @@ class FaceAnalysisPipeline:
             engagement_text = f"Eng: {score:.2f} ({level})"
             cv2.putText(image, engagement_text, (x1, y_offset),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 200, 100), 1)
+
+
+def make_face_analysis_pipeline() -> FaceAnalysisPipeline:
+    return FaceAnalysisPipeline(face_detector=FaceDetector(),
+                                emotion_recognizer=EmotionRecognizer(
+                                    device='cuda' if torch.cuda.is_available() else 'cpu'),
+                                ear_analyzer=EyeAspectRatioAnalyzer(), head_pose_estimator=HeadPoseEstimator())

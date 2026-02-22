@@ -11,7 +11,7 @@ from cv2 import error
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, status, Query
 
 from services.room import RoomService, Client, RoomNotFoundError, ClientNotFoundError, get_room_service
-from video_processing import FaceAnalysisPipeline, EngagementCalculator
+from services.video_processing import get_face_analysis_pipeline_service, FaceAnalysisPipelineService
 from services.video_processing.models import models
 
 stream_router = APIRouter()
@@ -20,8 +20,8 @@ stream_router = APIRouter()
 @stream_router.websocket('/ws/rooms/{room_id}/stream')
 async def stream(websocket: WebSocket, room_id: str,
                  name: Annotated[str | None, Query(max_length=30)] = None,
-                 room_service: RoomService = Depends(get_room_service)):
-    analyzer: FaceAnalysisPipeline = models['analyzer']
+                 room_service: RoomService = Depends(get_room_service),
+                 analyzer_service: FaceAnalysisPipelineService = Depends(get_face_analysis_pipeline_service)):
     engagement_calculator = EngagementCalculator()   # per-session экземпляр
     await websocket.accept()
     client: Client = Client(id_=uuid4(), name=name)
@@ -40,7 +40,7 @@ async def stream(websocket: WebSocket, room_id: str,
             if img is None:
                 warnings.warn('Could not decode img /ws/stream')
                 continue
-            analyze_res = analyzer.analyze(img)
+            analyze_res = analyzer_service.analyze(client.id_, img)
             new_img = analyze_res.image
             results = analyze_res.metrics
 
