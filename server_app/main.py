@@ -8,7 +8,7 @@ from api.stream import stream_router
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app: FastAPI):# TODO
     # Startup и загрузка моделей
     # load_models()
     yield
@@ -20,7 +20,7 @@ app = FastAPI(lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:8501", "*"],  # Streamlit по умолчанию
+    allow_origins=["http://localhost:8501", "*"],  # Streamlit по умолчанию TODO
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -31,7 +31,6 @@ app.add_middleware(
 async def health_check():
     return {
         "status": "healthy",
-        "models_loaded": len(models) > 0,
         "version": "1.0.0"
     }
 
