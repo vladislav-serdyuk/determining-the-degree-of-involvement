@@ -4,3 +4,4 @@ from .analyze_head_pose import *
 from .face_analysis_pipeline import *
 from .face_detection import *
 from .video_stream import *
+from .service import *

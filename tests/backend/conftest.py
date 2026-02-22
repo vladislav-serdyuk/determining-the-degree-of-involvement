@@ -7,7 +7,7 @@ import pytest
 @pytest.fixture
 def mock_models():
     mock_analyzer = MagicMock()
-    mock_analyzer.analyze.return_value = (MagicMock(), {'emotion': 'neutral', 'ear': 0.3})
+    mock_analyzer.analyze.return_value = (MagicMock(), [{'emotion': 'neutral', 'ear': 0.3}])
     return {'analyzer': mock_analyzer}
 
 

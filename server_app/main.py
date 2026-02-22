@@ -5,16 +5,15 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from api.room import room_router
 from api.stream import stream_router
-from services.video_processing.models import load_models, close_models, models
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup и загрузка моделей
-    load_models()
+    # load_models()
     yield
     # Shutdown и очистка ресурсов
-    close_models()
+    # close_models()
 
 
 app = FastAPI(lifespan=lifespan)

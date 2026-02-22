@@ -39,39 +39,39 @@ class Room:
 class RoomService:
     def __init__(self):
         print('init')
-        self.rooms: dict[str, Room] = {}
+        self._rooms: dict[str, Room] = {}
         self._lock = asyncio.Lock()
 
     async def get_rooms(self) -> list[Room]:
         async with self._lock:
-            return list(self.rooms.values())
+            return list(self._rooms.values())
 
     async def add_client(self, room_id: str, client: Client) -> None:
         async with self._lock:
-            if room_id not in self.rooms:
-                self.rooms[room_id] = Room(id_=room_id, clients={})
-            self.rooms[room_id].clients[client.id_] = client
+            if room_id not in self._rooms:
+                self._rooms[room_id] = Room(id_=room_id, clients={})
+            self._rooms[room_id].clients[client.id_] = client
 
     async def get_client(self, room_id: str, client_id: UUID) -> Client:
         async with self._lock:
-            if room_id not in self.rooms:
+            if room_id not in self._rooms:
                 raise RoomNotFoundError(f"Room {room_id} not found")
-            if client_id not in self.rooms[room_id].clients:
+            if client_id not in self._rooms[room_id].clients:
                 raise ClientNotFoundError(f"Client {client_id} not found in room {room_id}")
-            return self.rooms[room_id].clients[client_id]
+            return self._rooms[room_id].clients[client_id]
 
     async def remove_client(self, room_id: str, client: Client) -> None:
         async with self._lock:
-            if room_id not in self.rooms:
+            if room_id not in self._rooms:
                 return
-            if client.id_ not in self.rooms[room_id].clients:
+            if client.id_ not in self._rooms[room_id].clients:
                 return
-            del self.rooms[room_id].clients[client.id_]
-            if len(self.rooms[room_id].clients) == 0:
-                del self.rooms[room_id]
+            del self._rooms[room_id].clients[client.id_]
+            if len(self._rooms[room_id].clients) == 0:
+                del self._rooms[room_id]
 
     async def get_clients_in_room(self, room_id: str) -> list[Client]:
         async with self._lock:
-            if room_id not in self.rooms:
+            if room_id not in self._rooms:
                 raise RoomNotFoundError(f"Room {room_id} not found")
-            return list(self.rooms[room_id].clients.values())
+            return list(self._rooms[room_id].clients.values())
