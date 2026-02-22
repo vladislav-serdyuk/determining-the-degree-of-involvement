@@ -59,9 +59,10 @@ async def stream(websocket: WebSocket, room_id: str,
                 )
                 face_result['engagement'] = engagement
 
-            client.src_frame = img
-            client.prc_frame = new_img
-            client.metrics = results
+            async with client.lock:
+                client.src_frame = img
+                client.prc_frame = new_img
+                client.metrics = results
             _, buffer = cv2.imencode('.jpg', new_img)
             img_base64 = base64.b64encode(buffer).decode('utf-8')
             results_serializable = list(map(asdict, results))
@@ -87,9 +88,10 @@ async def client_stream(websocket: WebSocket, room_id: str, client_id: UUID,
         return
     try:
         while True:
-            img = client.src_frame
-            new_img = client.prc_frame
-            results = client.metrics
+            async with client.lock:
+                img = client.src_frame
+                new_img = client.prc_frame
+                results = client.metrics
             if img is None or new_img is None:
                 await asyncio.sleep(0.05)
                 continue
