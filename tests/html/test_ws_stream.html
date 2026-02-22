@@ -188,6 +188,8 @@
     let frameCountForFps = 0;
     let lastReceiveTime = Date.now();
     let receiveCount = 0;
+    let maxPendingFrames = 3;
+    let pendingFrames = 0;
 
     const serverAddress = document.getElementById('serverAddress');
     const roomIdInput = document.getElementById('roomId');
@@ -256,6 +258,7 @@
             connectionInfo.textContent = 'Connection URL: -';
             connectBtn.disabled = false;
             disconnectBtn.disabled = true;
+            pendingFrames = 0;
             stopStreaming();
         };
 
@@ -265,6 +268,7 @@
 
         ws.onmessage = (event) => {
             receiveCount++;
+            if (pendingFrames > 0) pendingFrames--;
             try {
                 const data = JSON.parse(event.data);
                 if (data.error) {
@@ -330,6 +334,7 @@
 
         streamInterval = setInterval(() => {
             if (!isStreaming || !ws || ws.readyState !== WebSocket.OPEN) return;
+            if (pendingFrames >= maxPendingFrames) return;
 
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
@@ -340,6 +345,7 @@
             const base64Data = imageData.split(',')[1];
 
             ws.send(JSON.stringify({ image: base64Data }));
+            pendingFrames++;
             frameCount++;
             frameCountForFps++;
             updateFpsDisplay();
