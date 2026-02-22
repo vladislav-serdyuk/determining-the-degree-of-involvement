@@ -20,7 +20,8 @@ app = FastAPI(lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:8501", "*"],  # Streamlit по умолчанию TODO
+    allow_origins=["http://localhost:8501",  # Streamlit по умолчанию
+                   "http://localhost:63342"],  # PyCharm webserver default port for opening html files
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
