@@ -28,11 +28,13 @@ class Client:
     src_frame: MatLike | None = None
     prc_frame: MatLike | None = None
     metrics: list[OneFaceMetricsAnalizResult] | None = None
-    _lock = asyncio.Lock()
+    _frame_queue: asyncio.Queue | None = None
 
-    @property
-    def lock(self):
-        return self._lock
+
+    def get_frame_queue(self) -> asyncio.Queue:
+        if self._frame_queue is None:
+            self._frame_queue = asyncio.Queue(maxsize=1)
+        return self._frame_queue
 
 
 @dataclass
