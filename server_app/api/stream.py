@@ -1,6 +1,7 @@
 import asyncio
 import base64
 import warnings
+from dataclasses import asdict
 from typing import Annotated
 from uuid import uuid4, UUID
 
@@ -9,29 +10,11 @@ import numpy as np
 from cv2 import error
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, status, Query
 
-from models import models
 from services.room import RoomService, Client, RoomNotFoundError, ClientNotFoundError, get_room_service
 from video_processing import FaceAnalysisPipeline, EngagementCalculator
+from services.video_processing.models import models
 
 stream_router = APIRouter()
-
-
-def convert_to_serializable(obj):
-    """Recursively converts numpy types to Python native types for JSON serialization"""
-    if isinstance(obj, dict):
-        return {k: convert_to_serializable(v) for k, v in obj.items()}
-    elif isinstance(obj, (list, tuple)):
-        return [convert_to_serializable(item) for item in obj]
-    elif isinstance(obj, np.integer):
-        return int(obj)
-    elif isinstance(obj, np.floating):
-        return float(obj)
-    elif isinstance(obj, np.bool_):
-        return bool(obj)
-    elif isinstance(obj, np.ndarray):
-        return obj.tolist()
-    else:
-        return obj
 
 
 @stream_router.websocket('/ws/rooms/{room_id}/stream')
@@ -57,7 +40,9 @@ async def stream(websocket: WebSocket, room_id: str,
             if img is None:
                 warnings.warn('Could not decode img /ws/stream')
                 continue
-            new_img, results = analyzer.analyze(img)
+            analyze_res = analyzer.analyze(img)
+            new_img = analyze_res.image
+            results = analyze_res.metrics
 
             # Обогатить каждое лицо данными по engagement
             for face_result in results:
@@ -79,7 +64,7 @@ async def stream(websocket: WebSocket, room_id: str,
             client.metrics = results
             _, buffer = cv2.imencode('.jpg', new_img)
             img_base64 = base64.b64encode(buffer).decode('utf-8')
-            results_serializable = convert_to_serializable(results)
+            results_serializable = list(map(asdict, results))
             await websocket.send_json({
                 'image': img_base64,
                 'results': results_serializable
@@ -112,7 +97,7 @@ async def client_stream(websocket: WebSocket, room_id: str, client_id: UUID,
             img_src_base64 = base64.b64encode(buffer).decode('utf-8')
             _, buffer = cv2.imencode('.jpg', new_img)
             img_base64 = base64.b64encode(buffer).decode('utf-8')
-            results_serializable = convert_to_serializable(results)
+            results_serializable = list(map(asdict, results))
             await websocket.send_json({
                 'image_src': img_src_base64,
                 'image': img_base64,

@@ -5,6 +5,8 @@
 """
 
 import math
+from dataclasses import dataclass
+from typing import Literal
 
 import cv2
 import numpy as np
@@ -28,6 +30,16 @@ MODEL_POINTS_3D = np.array([
     (-225.0, 170.0, 135.0),  # Right eye corner
     (-150.0, -150.0, 125.0),  # Right mouth corner
 ], dtype=np.float64)
+
+
+@dataclass
+class HeadPoseEstimatResult:
+    pitch: float
+    yaw: float
+    roll: float
+    rotation_vec: tuple[float]
+    translation_vec: tuple[float]
+    attention_state: Literal["Highly Attentive", "Attentive", "Distracted", "Very Distracted"]
 
 
 class HeadPoseEstimator:
@@ -64,8 +76,7 @@ class HeadPoseEstimator:
 
         return pitch, yaw, roll
 
-    def estimate(self, face_landmarks, image_width: int, image_height: int) -> dict[str, float | tuple[
-        float, float, float]] | None:
+    def estimate(self, face_landmarks, image_width: int, image_height: int) -> HeadPoseEstimatResult | None:
         """
         Оценивает позу головы на основе landmarks точек (для одного лица).
 
@@ -122,19 +133,20 @@ class HeadPoseEstimator:
             # Извлечение углов Эйлера
             pitch, yaw, roll = self._rotation_matrix_to_angles(rotation_mat)
 
-            return {
-                'pitch': pitch,
-                'yaw': yaw,
-                'roll': roll,
-                'rotation_vec': tuple(rotation_vec.flatten()),
-                'translation_vec': tuple(translation_vec.flatten())
-            }
+            return HeadPoseEstimatResult(pitch=pitch, yaw=yaw, roll=roll, rotation_vec=tuple(rotation_vec.flatten()),
+                                         translation_vec=tuple(translation_vec.flatten()),
+                                         attention_state=classify_attention_state(
+                                             pitch,
+                                             yaw,
+                                             roll
+                                         ))
 
         return None
 
 
 # TODO: донастройка параметров и порогов при практическом тесте механизма
-def classify_attention_state(pitch: float, yaw: float, roll: float) -> str:
+def classify_attention_state(pitch: float, yaw: float, roll: float) -> Literal[
+    "Highly Attentive", "Attentive", "Distracted", "Very Distracted"]:
     """
     Классификация состояния внимания на основе углов головы.
 

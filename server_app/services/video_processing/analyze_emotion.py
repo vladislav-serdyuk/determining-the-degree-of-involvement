@@ -1,15 +1,22 @@
-import typing
 from collections import deque
+from dataclasses import dataclass
+from typing import Literal
 
 import cv2
 import torch
 from emotiefflib.facial_analysis import get_model_list, EmotiEffLibRecognizer
 
 
+@dataclass
+class EmotionRecognizeResult:
+    label: str
+    confidence: float
+
+
 class EmotionRecognizer:
     """Распознавание с temporal smoothing + confidence thresholding"""
 
-    def __init__(self, *, device: typing.Literal['cpu', 'cuda'] = 'cpu', window_size=15,
+    def __init__(self, *, device: Literal['cpu', 'cuda'] = 'cpu', window_size=15,
                  confidence_threshold=0.55, ambiguity_threshold=0.15,
                  model_name='enet_b2_8'):
         """
@@ -81,10 +88,10 @@ class EmotionRecognizer:
         self._validate_ambiguity_threshold(ambiguity_threshold)
         self.ambiguity_threshold = ambiguity_threshold
 
-    def predict(self, face_crop: cv2.typing.MatLike) -> tuple[str, float]:
+    def predict(self, face_crop: cv2.typing.MatLike) -> EmotionRecognizeResult:
         """Предсказывает эмоцию с продвинутой фильтрацией"""
         if face_crop.size == 0:
-            return "Neutral", 0.0  # Fallback к нейтральному
+            return EmotionRecognizeResult('Neutral', 0.0)  # Fallback к нейтральному
 
         try:
             # Получаем предсказание
@@ -139,14 +146,14 @@ class EmotionRecognizer:
 
                     # Если две топ-эмоции слишком близки -> нейтральное
                     if (top_score - second_score) / total_weight < self.ambiguity_threshold:
-                        return "Neutral", 0.5
+                        return EmotionRecognizeResult('Neutral', 0.5)
 
-                    return top_emotion_result, top_score / total_weight
+                    return EmotionRecognizeResult(top_emotion_result, top_score / total_weight)
                 else:
                     top_emotion_result, top_score = sorted_emotions[0]
-                    return top_emotion_result, top_score / total_weight
+                    return EmotionRecognizeResult(top_emotion_result, top_score / total_weight)
 
-            return top_emotion, confidence
+            return EmotionRecognizeResult(top_emotion, confidence)
 
         except (torch.cuda.OutOfMemoryError, MemoryError):
             # Критично - пробрасываем выше для обработки
@@ -156,7 +163,7 @@ class EmotionRecognizer:
         except (ValueError, RuntimeError, AttributeError) as e:
             # Ожидаемые проблемы обработки - логируем и fallback
             print(f"Предупреждение при распознавании: {e}")
-            return "Neutral", 0.0
+            return EmotionRecognizeResult('Neutral', 0.0)
 
     def reset(self):
         """Сброс истории"""

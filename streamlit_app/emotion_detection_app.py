@@ -15,12 +15,12 @@ from PIL import Image
 sys.path.append('../server_app/')
 
 try:
-    from video_processing import (
+    from services.video_processing import (
         FaceDetector,
         EmotionRecognizer,
         FaceAnalysisPipeline
     )
-    from video_processing.video_stream import CaptureReadError, process_video_stream
+    from services.video_processing import CaptureReadError, process_video_stream
 
     BACKEND_AVAILABLE = True
 except ImportError as e:
@@ -30,8 +30,8 @@ except ImportError as e:
 # Импорт модулей EAR и HeadPose (доп.)
 EAR_HEADPOSE_AVAILABLE = False
 try:
-    from video_processing import EyeAspectRatioAnalyzer, classify_attention_by_ear
-    from video_processing import HeadPoseEstimator, classify_attention_state
+    from services.video_processing import EyeAspectRatioAnalyzer, classify_attention_by_ear
+    from services.video_processing import HeadPoseEstimator, classify_attention_state
 
     EAR_HEADPOSE_AVAILABLE = True
 except ImportError:
@@ -140,7 +140,30 @@ class EmotionDetectionProcessor:
                 frame = cv2.flip(frame, 1)
 
             # Обработка кадра с помощью детектора
-            processed_frame, results = self.detector.analyze(frame)
+            analysis_result = self.detector.analyze(frame)
+
+            processed_frame = analysis_result.image
+            results = []
+            for metric in analysis_result.metrics:
+                result_dict = {
+                    'emotion': metric.emotion,
+                    'confidence': metric.confidence,
+                    'bbox': metric.bbox,
+                }
+                if metric.ear:
+                    result_dict['ear'] = {
+                        'avg_ear': metric.ear.avg_ear,
+                        'eyes_open': not metric.ear.is_blinking,
+                        'blink_count': metric.ear.blink_count
+                    }
+                if metric.head_pose:
+                    result_dict['head_pose'] = {
+                        'pitch': metric.head_pose.pitch,
+                        'yaw': metric.head_pose.yaw,
+                        'roll': metric.head_pose.roll,
+                        'attention_state': getattr(metric.head_pose, 'attention_state', None)
+                    }
+                results.append(result_dict)
 
             self.current_emotions = results
             return processed_frame, results

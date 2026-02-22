@@ -35,8 +35,27 @@ def process_video_stream(video_stream: cv2.VideoCapture,
                 raise CaptureReadError('Failed to get image from "video_stream"')
             if flip_h:
                 img = cv2.flip(img, 1)
-            new_img, emotions = face_analyze_pipeline.analyze(img)
-            yield new_img, emotions
+            analysis_result = face_analyze_pipeline.analyze(img)
+            emotions = []
+            for metric in analysis_result.metrics:
+                emotion_dict: dict = {
+                    'emotion': metric.emotion,
+                    'confidence': metric.confidence,
+                }
+                if metric.ear:
+                    emotion_dict['ear'] = {
+                        'avg_ear': metric.ear.avg_ear,
+                        'eyes_open': not metric.ear.is_blinking,
+                        'blink_count': metric.ear.blink_count
+                    }
+                if metric.head_pose:
+                    emotion_dict['head_pose'] = {
+                        'pitch': metric.head_pose.pitch,
+                        'yaw': metric.head_pose.yaw,
+                        'roll': metric.head_pose.roll,
+                    }
+                emotions.append(emotion_dict)
+            yield analysis_result.image, emotions
     finally:
         if use_inner_models:
             face_detector.close()

@@ -3,6 +3,7 @@
 """
 
 from collections import deque
+from dataclasses import dataclass
 from time import time
 
 import cv2
@@ -23,6 +24,14 @@ try:
 except ImportError:
     EAR_AVAILABLE = False
     print("Модули analyze_ear и/или analyze_head_pose не найдены. EAR и HeadPose анализ будет недоступен.")
+
+
+@dataclass
+class FaceDetectResult:
+    bbox: tuple[int, int, int, int]
+    crop: cv2.typing.MatLike
+    confidence: float
+    keypoints: list[tuple[int, int]]
 
 
 class FaceDetector:
@@ -70,13 +79,12 @@ class FaceDetector:
             min_detection_confidence=min_detection_confidence
         )
 
-    def detect(self, image: cv2.typing.MatLike) -> list[dict[str,
-    tuple[int, int, int, int] | cv2.typing.MatLike | float | list[tuple[int, int]]]]:
+    def detect(self, image: cv2.typing.MatLike) -> list[FaceDetectResult]:
         """Детектирует лица на изображении"""
         rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         results = self.detector.process(rgb_image)
 
-        faces = []
+        faces: list[FaceDetectResult] = []
         if results.detections:
             h, w, _ = image.shape
             for detection in results.detections:
@@ -94,19 +102,15 @@ class FaceDetector:
                 face_crop = image[y1:y2, x1:x2]
 
                 # ИЗВЛЕКАЕМ КЛЮЧЕВЫЕ ТОЧКИ (6 точек)
-                keypoints = []
+                keypoints: list[tuple[int, int]] = []
                 if detection.location_data.relative_keypoints:
                     for keypoint in detection.location_data.relative_keypoints:
                         kp_x = int(keypoint.x * w)
                         kp_y = int(keypoint.y * h)
                         keypoints.append((kp_x, kp_y))
 
-                faces.append({
-                    'bbox': (x1, y1, x2, y2),
-                    'crop': face_crop,
-                    'confidence': detection.score[0],
-                    'keypoints': keypoints
-                })
+                faces.append(FaceDetectResult(bbox=(x1, y1, x2, y2), crop=face_crop, confidence=detection.score[0],
+                                              keypoints=keypoints))
 
         return faces
 
@@ -115,7 +119,7 @@ class FaceDetector:
 
 
 if __name__ == '__main__':
-    from video_processing.video_stream import process_video_stream
+    from services.video_processing.video_stream import process_video_stream
 
     print('Using camera 0')
     cap = cv2.VideoCapture(0)
