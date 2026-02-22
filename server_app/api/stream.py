@@ -8,7 +8,7 @@ from uuid import uuid4, UUID
 import cv2
 import numpy as np
 from cv2 import error
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, status, Query
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, status, Query, Path
 
 from services.room import RoomService, Client, RoomNotFoundError, ClientNotFoundError, get_room_service
 from services.video_processing import get_face_analysis_pipeline_service, FaceAnalysisPipelineService
@@ -20,7 +20,7 @@ stream_router = APIRouter()
 @stream_router.websocket('/ws/rooms/{room_id}/stream')
 async def stream(websocket: WebSocket, room_service: Annotated[RoomService, Depends(get_room_service)],
                  analyzer_service: Annotated[FaceAnalysisPipelineService, Depends(get_face_analysis_pipeline_service)],
-                 room_id: Annotated[str, Query(max_length=40)],
+                 room_id: Annotated[str, Path(max_length=40)],
                  name: Annotated[str | None, Query(max_length=30)] = None):
     engagement_calculator = EngagementCalculator()   # per-session экземпляр
     await websocket.accept()
@@ -59,10 +59,18 @@ async def stream(websocket: WebSocket, room_service: Annotated[RoomService, Depe
                 )
                 face_result['engagement'] = engagement
 
-            async with client.lock:
-                client.src_frame = img
-                client.prc_frame = new_img
-                client.metrics = results
+            queue = client.get_frame_queue()
+            frame_data = {
+                'src': img,
+                'prc': new_img,
+                'results': results
+            }
+            if queue.full():
+                try:
+                    queue.get_nowait()
+                except asyncio.QueueEmpty:
+                    pass
+            queue.put_nowait(frame_data)
             _, buffer = cv2.imencode('.jpg', new_img)
             img_base64 = base64.b64encode(buffer).decode('utf-8')
             results_serializable = list(map(asdict, results))
@@ -77,7 +85,7 @@ async def stream(websocket: WebSocket, room_service: Annotated[RoomService, Depe
 
 
 @stream_router.websocket('/ws/rooms/{room_id}/clients/{client_id}/output_stream')
-async def client_stream(websocket: WebSocket, room_id: Annotated[str, Query(max_length=40)], client_id: UUID,
+async def client_stream(websocket: WebSocket, room_id: Annotated[str, Path(max_length=40)], client_id: UUID,
                         room_service: Annotated[RoomService, Depends(get_room_service)]):
     await websocket.accept() # TODO
     try:
@@ -88,12 +96,15 @@ async def client_stream(websocket: WebSocket, room_id: Annotated[str, Query(max_
         return
     try:
         while True:
-            async with client.lock:
-                img = client.src_frame
-                new_img = client.prc_frame
-                results = client.metrics
+            queue = client.get_frame_queue()
+            try:
+                frame_data = await asyncio.wait_for(queue.get(), timeout=0.1)
+            except asyncio.TimeoutError:
+                continue
+            img = frame_data['src']
+            new_img = frame_data['prc']
+            results = frame_data['results']
             if img is None or new_img is None:
-                await asyncio.sleep(0.05)
                 continue
             _, buffer = cv2.imencode('.jpg', img)
             img_src_base64 = base64.b64encode(buffer).decode('utf-8')
@@ -105,7 +116,6 @@ async def client_stream(websocket: WebSocket, room_id: Annotated[str, Query(max_
                 'image': img_base64,
                 'results': results_serializable
             })
-            await asyncio.sleep(0.05)
 
     except WebSocketDisconnect:
         pass
