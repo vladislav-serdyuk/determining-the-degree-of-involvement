@@ -16,7 +16,8 @@ class FaceAnalysisPipelineService:
         return self._analyzers[client_id].analyze(image)
 
 
-def get_face_analysis_pipeline_service(request: Request = None, websocket: WebSocket = None) -> FaceAnalysisPipelineService:
+def get_face_analysis_pipeline_service(request: Request = None,
+                                       websocket: WebSocket = None) -> FaceAnalysisPipelineService:
     if request is not None:
         app: FastAPI = request.app
     elif websocket is not None:

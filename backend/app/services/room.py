@@ -25,7 +25,6 @@ class Client:
     metrics: list[OneFaceMetricsAnalizResult] | None = None
     _frame_queue: asyncio.Queue | None = None
 
-
     def get_frame_queue(self) -> asyncio.Queue:
         if self._frame_queue is None:
             self._frame_queue = asyncio.Queue(maxsize=1)

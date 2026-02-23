@@ -3,7 +3,7 @@ from dataclasses import dataclass
 
 import cv2
 import torch
-from emotiefflib.facial_analysis import  EmotiEffLibRecognizer
+from emotiefflib.facial_analysis import EmotiEffLibRecognizer
 
 
 @dataclass
@@ -15,7 +15,7 @@ class EmotionRecognizeResult:
 class EmotionRecognizer:
     """Распознавание с temporal smoothing + confidence thresholding"""
 
-    model_name = 'enet_b2_8' # TODO to config
+    model_name = 'enet_b2_8'  # TODO to config
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     recognizer = EmotiEffLibRecognizer(
         model_name=model_name,
