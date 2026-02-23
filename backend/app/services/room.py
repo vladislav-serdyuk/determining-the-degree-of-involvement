@@ -1,9 +1,9 @@
 import asyncio
 from dataclasses import dataclass
-from functools import lru_cache
 from uuid import UUID
 
 from cv2.typing import MatLike
+from fastapi import Request, WebSocket, FastAPI
 
 from services.video_processing.face_analysis_pipeline import OneFaceMetricsAnalizResult
 
@@ -14,11 +14,6 @@ class RoomNotFoundError(Exception):
 
 class ClientNotFoundError(Exception):
     pass
-
-
-@lru_cache() # TODO
-def get_room_service() -> "RoomService":
-    return RoomService()
 
 
 @dataclass
@@ -82,3 +77,15 @@ class RoomService:
             if room_id not in self._rooms:
                 raise RoomNotFoundError(f"Room {room_id} not found")
             return list(self._rooms[room_id].clients.values())
+
+
+def get_room_service(request: Request = None, websocket: WebSocket = None) -> RoomService:
+    if request is not None:
+        app: FastAPI = request.app
+    elif websocket is not None:
+        app: FastAPI = websocket.app
+    else:
+        raise RuntimeError('get_room_service expected "request" or "websocket" arg, got Nones')
+    if not hasattr(app.state, 'room_service'):
+        app.state.room_service = RoomService()
+    return app.state.room_service
