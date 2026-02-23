@@ -1,6 +1,6 @@
 services:
   attention-server:
-    build: .
+    build: backend
     image: attention-server:latest
     ports:
       - "8000:8000"
