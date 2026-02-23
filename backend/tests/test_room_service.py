@@ -2,7 +2,7 @@ from uuid import uuid4
 
 import pytest
 
-from services.room import (
+from app.services.room import (
     Client,
     RoomNotFoundError,
     ClientNotFoundError,

@@ -12,11 +12,11 @@ import cv2
 import mediapipe as mp
 import torch
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../backend/app/'))
-from services.video_processing import EmotionRecognizer
-from services.video_processing.analyze_ear import EyeAspectRatioAnalyzer, LEFT_EYE_LANDMARKS, \
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../backend/'))
+from app.services.video_processing import EmotionRecognizer
+from app.services.video_processing.analyze_ear import EyeAspectRatioAnalyzer, LEFT_EYE_LANDMARKS, \
     RIGHT_EYE_LANDMARKS
-from services.video_processing import HeadPoseEstimator, HEAD_POSE_LANDMARKS
+from app.services.video_processing import HeadPoseEstimator, HEAD_POSE_LANDMARKS
 
 # Инициализация MediaPipe (в этом скрипте отдельная реализация детектора лица через Face Mesh)
 mp_face_mesh = mp.solutions.face_mesh

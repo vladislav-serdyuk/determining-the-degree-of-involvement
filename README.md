@@ -37,14 +37,14 @@ python -3.12 -m venv venv
 
 #### Run backend
 
-> Start uvicorn only from `server_app` directory. In another case its modules do not load properly
+> Start uvicorn only from `backend` directory. In another case its modules do not load properly
 
 ```bash
 # if global uvicorn installed
-cd backend && uvicorn main:app --reload --host 0.0.0.0 --port 8000
+cd backend && uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 # from venv
-cd backend && python -m uvicorn main:app --reload --host 0.0.0.0 --port 8000
+cd backend && python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 ### Run frontend (another terminal)
@@ -58,8 +58,8 @@ cd streamlit_app && streamlit run emotion_detection_app.py
 To test server state just use `http://localhost:8000/health` in your browser and `http://localhost:8000/docs` to check
 generated documentation.
 
-To try API without streamlit app you need to open `../tests/test_ws_stream.html` page with browser and click **Connect
-**, **Start Video** buttons.
+To try API without streamlit app you need to open `../tests/test_ws_stream.html` page with browser 
+and click **Connect**, **Start Video** buttons.
 
 > The server must be started before.
 

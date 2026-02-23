@@ -11,15 +11,15 @@ import numpy as np
 import streamlit as st
 from PIL import Image
 
-sys.path.append('../backend/app')
+sys.path.append('../backend')
 
 try:
-    from services.video_processing import (
+    from app.services.video_processing import (
         FaceDetector,
         EmotionRecognizer,
         FaceAnalysisPipeline
     )
-    from services.video_processing import CaptureReadError, process_video_stream
+    from app.services.video_processing import CaptureReadError, process_video_stream
 
     BACKEND_AVAILABLE = True
 except ImportError as e:
@@ -29,8 +29,8 @@ except ImportError as e:
 # Импорт модулей EAR и HeadPose (доп.)
 EAR_HEADPOSE_AVAILABLE = False
 try:
-    from services.video_processing import EyeAspectRatioAnalyzer, classify_attention_by_ear
-    from services.video_processing import HeadPoseEstimator, classify_attention_state
+    from app.services.video_processing import EyeAspectRatioAnalyzer, classify_attention_by_ear
+    from app.services.video_processing import HeadPoseEstimator, classify_attention_state
 
     EAR_HEADPOSE_AVAILABLE = True
 except ImportError:

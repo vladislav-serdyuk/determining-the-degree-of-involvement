@@ -1,4 +1,4 @@
 import os
 import sys
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../backend/app/'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../backend/'))

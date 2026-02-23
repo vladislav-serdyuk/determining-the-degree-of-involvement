@@ -2,7 +2,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from services.room import RoomService, RoomNotFoundError, get_room_service
+from app.services.room import RoomService, RoomNotFoundError, get_room_service
 
 room_router = APIRouter()
 

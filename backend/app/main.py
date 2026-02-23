@@ -1,8 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from api.room import room_router
-from api.stream import stream_router
+from app.api.room import room_router
+from app.api.stream import stream_router
 
 app = FastAPI()
 
