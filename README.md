@@ -4,8 +4,8 @@ Real-time emotion detection system with FastAPI backend and Streamlit frontend.
 
 ## Components
 
-- **server_app/**: FastAPI backend with WebSocket video streaming support
-- **streamlit_app/**: Streamlit frontend for video upload and webcam processing
+- **backend/**: FastAPI backend with WebSocket video streaming support
+- **frontend/**: Streamlit frontend for video upload and webcam processing
 
 ## Quick Start
 
