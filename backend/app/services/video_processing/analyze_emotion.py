@@ -5,6 +5,8 @@ import cv2
 import torch
 from emotiefflib.facial_analysis import EmotiEffLibRecognizer
 
+from app.core.config import settings
+
 
 @dataclass
 class EmotionRecognizeResult:
@@ -15,34 +17,39 @@ class EmotionRecognizeResult:
 class EmotionRecognizer:
     """Распознавание с temporal smoothing + confidence thresholding"""
 
-    model_name = 'enet_b2_8'  # TODO to config
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda' if settings.emotion_device == 'auto' else settings.emotion_device
+    if device == 'cuda' and not torch.cuda.is_available():
+        device = 'cpu'
     recognizer = EmotiEffLibRecognizer(
-        model_name=model_name,
+        model_name=settings.emotion_model_name,
         device=device
     )
-    print(f"EmotiEffLib + Advanced загружен: модель={model_name}, устройство={device}")
+    print(f"EmotiEffLib + Advanced загружен: модель={settings.emotion_model_name}, устройство={device}")
 
-    def __init__(self, *, window_size=15, confidence_threshold=0.55, ambiguity_threshold=0.15):
+    def __init__(self, *, window_size=None, confidence_threshold=None, ambiguity_threshold=None):
         """
         Args:
             window_size: Размер окна для сглаживания
             confidence_threshold: Минимальный порог уверенности
             ambiguity_threshold: Порог для амбивалентных эмоций
         """
-        self._validate_window_size(window_size)
-        self._validate_confidence_threshold(confidence_threshold)
-        self._validate_ambiguity_threshold(ambiguity_threshold)
+        actual_window_size = window_size if window_size is not None else settings.emotion_window_size
+        actual_confidence = confidence_threshold if confidence_threshold is not None else settings.emotion_confidence_threshold
+        actual_ambiguity = ambiguity_threshold if ambiguity_threshold is not None else settings.emotion_ambiguity_threshold
+
+        self._validate_window_size(actual_window_size)
+        self._validate_confidence_threshold(actual_confidence)
+        self._validate_ambiguity_threshold(actual_ambiguity)
 
         self.emotion_labels = ['Angry', 'Disgust', 'Fear', 'Happy',
                                'Sad', 'Surprise', 'Neutral', 'Contempt']
 
         # Параметры сглаживания
-        self.history = deque(maxlen=window_size)
+        self.history = deque(maxlen=actual_window_size)
 
         # Параметры фильтрации
-        self.confidence_threshold = confidence_threshold
-        self.ambiguity_threshold = ambiguity_threshold
+        self.confidence_threshold = actual_confidence
+        self.ambiguity_threshold = actual_ambiguity
 
     @staticmethod
     def _validate_window_size(window_size: int):

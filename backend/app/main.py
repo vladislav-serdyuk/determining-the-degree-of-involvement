@@ -3,13 +3,13 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.room import room_router
 from app.api.stream import stream_router
+from app.core.config import settings
 
 app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:8501",  # Streamlit по умолчанию
-                   "http://localhost:63342"],  # PyCharm webserver default port for opening html files
+    allow_origins=settings.get_cors_origins(),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -20,7 +20,7 @@ app.add_middleware(
 async def health_check():
     return {
         "status": "healthy",
-        "version": "1.0.0"
+        "version": settings.app_version
     }
 
 

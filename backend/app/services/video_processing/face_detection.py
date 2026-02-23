@@ -9,6 +9,8 @@ from time import time
 import cv2
 import mediapipe as mp
 
+from app.core.config import settings
+
 # Настройка MediaPipe
 mp_face_detection = mp.solutions.face_detection
 mp_face_mesh = mp.solutions.face_mesh
@@ -37,20 +39,20 @@ class FaceDetectResult:
 class FaceDetector:
     """Модуль детекции лиц с использованием MediaPipe"""
 
-    min_detection_confidence = 0.5
-    detector = mp_face_detection.FaceDetection(  # TODO to config
-        model_selection=1,  # 1 = full-range model (до 5 метров)
-        min_detection_confidence=min_detection_confidence
+    detector = mp_face_detection.FaceDetection(
+        model_selection=settings.face_detection_model_selection,
+        min_detection_confidence=settings.face_detection_min_confidence
     )
 
-    def __init__(self, *, margin: int = 20):
+    def __init__(self, *, margin: int = None):
         """
 
         :param margin: Добавочный отступ к bbox, предсказанный моделью
         """
-        self._validate_margin(margin)
+        actual_margin = margin if margin is not None else settings.face_detection_margin
+        self._validate_margin(actual_margin)
 
-        self.margin = margin
+        self.margin = actual_margin
 
     @staticmethod
     def _validate_margin(margin: int) -> None:
@@ -67,7 +69,7 @@ class FaceDetector:
     def set_min_detection_confidence(self, min_detection_confidence: float):
         self._validate_confidence(min_detection_confidence)
         self.detector = mp_face_detection.FaceDetection(
-            model_selection=1,  # 1 = full-range model (до 5 метров)
+            model_selection=settings.face_detection_model_selection,
             min_detection_confidence=min_detection_confidence
         )
 

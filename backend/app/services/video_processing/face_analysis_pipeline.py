@@ -2,6 +2,7 @@ from dataclasses import dataclass
 
 import cv2
 
+from app.core.config import settings
 from .analyze_ear import EyeAspectRatioAnalyzer, EyeAspectRatioAnalyzeResult
 from .analyze_emotion import EmotionRecognizer
 from .analyze_head_pose import HeadPoseEstimator, HeadPoseEstimatResult
@@ -53,10 +54,10 @@ class FaceAnalysisPipeline:
         if self.face_mesh is None:
             self.face_mesh = mp_face_mesh.FaceMesh(
                 static_image_mode=False,
-                max_num_faces=5,
+                max_num_faces=settings.face_mesh_max_num_faces,
                 refine_landmarks=True,
-                min_detection_confidence=0.5,
-                min_tracking_confidence=0.5
+                min_detection_confidence=settings.face_mesh_min_detection_confidence,
+                min_tracking_confidence=settings.face_mesh_min_tracking_confidence
             )
 
     def _close_face_mesh(self):

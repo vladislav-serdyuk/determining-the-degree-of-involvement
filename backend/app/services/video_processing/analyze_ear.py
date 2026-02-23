@@ -9,6 +9,8 @@ from typing import Literal
 
 import numpy as np
 
+from app.core.config import settings
+
 # Индексы landmarks для правого глаза (6 точек)
 # Порядок: [P1, P2, P3, P4, P5, P6]
 # P1, P4 = горизонтальные углы (внешний, внутренний)
@@ -37,21 +39,21 @@ class EyeAspectRatioAnalyzeResult:
 class EyeAspectRatioAnalyzer:
     """Анализ состояния глаз с использованием Eye Aspect Ratio (EAR)"""
 
-    def __init__(self, *, ear_threshold: float = 0.25, consec_frames: int = 3):
+    def __init__(self, *, ear_threshold: float = None, consec_frames: int = None):
         """
         Args:
             ear_threshold: Порог EAR для детекции закрытых глаз (обычно 0.25)
             consec_frames: Количество кадров подряд для подтверждения моргания
         """
-        self.ear_threshold = ear_threshold
-        self.consec_frames = consec_frames
+        self.ear_threshold = ear_threshold if ear_threshold is not None else settings.ear_threshold
+        self.consec_frames = consec_frames if consec_frames is not None else settings.ear_consec_frames
 
         # История для детекции моргания (для каждого лица отдельно)
         self.blink_counters = {}  # {face_id: counter}
         self.blink_totals = {}  # {face_id: total_blinks}
         self.ear_history: dict[int, deque[float]] = {}  # {face_id: deque([ear_values])}
 
-        print(f"EyeAspectRatioAnalyzer инициализирован: threshold={ear_threshold}, frames={consec_frames}")
+        print(f"EyeAspectRatioAnalyzer инициализирован: threshold={self.ear_threshold}, frames={self.consec_frames}")
 
     def set_ear_threshold(self, ear_threshold: float):
         """Изменяет порог EAR без сброса счётчиков"""
@@ -123,7 +125,7 @@ class EyeAspectRatioAnalyzer:
         if face_id not in self.blink_counters:
             self.blink_counters[face_id] = 0
             self.blink_totals[face_id] = 0
-            self.ear_history[face_id] = deque(maxlen=30)  # История EAR за последние 30 кадров
+            self.ear_history[face_id] = deque(maxlen=settings.ear_history_maxlen)
 
         # Добавление в историю
         self.ear_history[face_id].append(avg_ear)
@@ -179,14 +181,14 @@ def classify_attention_by_ear(avg_ear: float, blink_rate: float) -> Literal["Ale
     # Сниженная частота (< 5/мин) = сильная концентрация или усталость
     # Повышенная частота (> 30/мин) = стресс или раздражение
 
-    if avg_ear >= 0.30:
+    if avg_ear >= settings.ear_alert_threshold:
         if 10 <= blink_rate <= 25:
             return "Alert"  # Нормальное состояние (внимательность, сосредоточненность)
         else:
             return "Normal"  # Немного отклонения (обычные, открытые глаза)
-    elif 0.25 <= avg_ear < 0.30:
+    elif avg_ear >= settings.ear_drowsy_threshold:
         return "Normal"  # Пограничное состояние (так же принимаем за нормальное)
-    elif 0.20 <= avg_ear < 0.25:
+    elif avg_ear >= settings.ear_very_drowsy_threshold:
         return "Drowsy"  # Начало усталости (читаемая усталость)
     else:
         return "Very Drowsy"  # Глаза почти закрыты (сильная усталость)
