@@ -16,7 +16,7 @@ class FaceAnalysisPipelineService:
     
     Создает и хранит отдельный экземпляр FaceAnalysisPipeline для каждого клиента.
     """
-    
+
     def __init__(self):
         """Инициализирует сервис."""
         self._analyzers: dict[UUID, FaceAnalysisPipeline] = {}
