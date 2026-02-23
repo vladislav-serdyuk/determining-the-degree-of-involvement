@@ -11,6 +11,8 @@ from typing import Literal
 import cv2
 import numpy as np
 
+from app.core.config import settings
+
 # Индексы landmarks для Head Pose (6-точечная модель)
 HEAD_POSE_LANDMARKS = [1, 33, 61, 199, 263, 291]
 # 1   = Nose tip                (кончик носа)
@@ -162,11 +164,11 @@ def classify_attention_state(pitch: float, yaw: float, roll: float) -> Literal[
     abs_yaw = abs(yaw)
 
     # Критерии внимания (пороговые значения)
-    if abs_pitch < 10 and abs_yaw < 15:
+    if abs_pitch < settings.head_pitch_highly_attentive and abs_yaw < settings.head_yaw_highly_attentive:
         return "Highly Attentive"  # Прямой взгляд на экран
-    elif abs_pitch < 20 and abs_yaw < 25:
+    elif abs_pitch < settings.head_pitch_attentive and abs_yaw < settings.head_yaw_attentive:
         return "Attentive"  # Небольшое отклонение
-    elif abs_pitch < 30 and abs_yaw < 40:
+    elif abs_pitch < settings.head_pitch_distracted and abs_yaw < settings.head_yaw_distracted:
         return "Distracted"  # Заметное отклонение
     else:
         return "Very Distracted"  # Взгляд в сторону/вниз/вверх

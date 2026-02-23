@@ -21,7 +21,7 @@ def process_video_stream(video_stream: cv2.VideoCapture,
     use_inner_models = face_analyze_pipeline is None
     if use_inner_models:
         face_detector = FaceDetector()
-        emotion_recognizer = EmotionRecognizer(window_size=15, confidence_threshold=0.55, ambiguity_threshold=0.15)
+        emotion_recognizer = EmotionRecognizer()
         face_analyze_pipeline = FaceAnalysisPipeline(face_detector, emotion_recognizer)
 
     if not video_stream.isOpened():
