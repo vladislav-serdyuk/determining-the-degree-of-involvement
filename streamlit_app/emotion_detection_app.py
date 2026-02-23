@@ -9,7 +9,6 @@ from time import time as current_time
 import cv2
 import numpy as np
 import streamlit as st
-import torch
 from PIL import Image
 
 sys.path.append('../backend/app')

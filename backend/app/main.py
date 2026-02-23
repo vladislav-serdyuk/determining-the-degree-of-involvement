@@ -1,22 +1,10 @@
-from contextlib import asynccontextmanager
-
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from api.room import room_router
 from api.stream import stream_router
 
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):# TODO
-    # Startup и загрузка моделей
-    # load_models()
-    yield
-    # Shutdown и очистка ресурсов
-    # close_models()
-
-
-app = FastAPI(lifespan=lifespan)
+app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,

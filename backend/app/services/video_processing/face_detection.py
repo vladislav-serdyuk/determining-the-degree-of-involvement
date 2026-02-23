@@ -37,8 +37,8 @@ class FaceDetectResult:
 class FaceDetector:
     """Модуль детекции лиц с использованием MediaPipe"""
 
-    min_detection_confidence  = 0.5
-    detector = mp_face_detection.FaceDetection( # TODO to config
+    min_detection_confidence = 0.5
+    detector = mp_face_detection.FaceDetection(  # TODO to config
         model_selection=1,  # 1 = full-range model (до 5 метров)
         min_detection_confidence=min_detection_confidence
     )

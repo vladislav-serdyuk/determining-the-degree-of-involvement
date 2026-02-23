@@ -1,5 +1,4 @@
 import cv2
-import torch
 
 from .analyze_emotion import EmotionRecognizer
 from .face_analysis_pipeline import FaceAnalysisPipeline
