@@ -25,7 +25,7 @@ docker compose up -d --build
 
 ```bash
 cd backend && pip install -r requirements.txt
-cd ../streamlit_app && pip install -r requirements.txt
+cd ../frontend && pip install -r requirements.txt
 ```
 
 Required `Python 3.12+`:
@@ -50,7 +50,7 @@ cd backend && python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ### Run frontend (another terminal)
 
 ```bash
-cd streamlit_app && streamlit run emotion_detection_app.py
+cd frontend && streamlit run emotion_detection_app.py
 ```
 
 ### Tests
