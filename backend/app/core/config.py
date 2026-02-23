@@ -1,9 +1,31 @@
+"""
+Модуль конфигурации приложения.
+
+Загружает настройки из переменных окружения и файла .env.
+"""
+
 from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
+    """
+    Настройки приложения для распознавания эмоций.
+    
+    Загружаются из переменных окружения или файла .env.
+    Все параметры имеют значения по умолчанию для разработки.
+    
+    Attributes:
+        app_version: Версия приложения
+        cors_allowed_origins: Разрешенные источники для CORS
+        face_detection_*: Параметры детекции лиц MediaPipe
+        face_mesh_*: Параметры Face Mesh MediaPipe
+        emotion_*: Параметры распознавания эмоций
+        ear_*: Параметры анализа Eye Aspect Ratio
+        head_pitch_*/head_yaw_*: Пороги для классификации позы головы
+    """
+    
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
@@ -56,7 +78,12 @@ class Settings(BaseSettings):
     head_yaw_distracted: float = 40.0
 
     def get_cors_origins(self) -> list[str]:
-        """Returns CORS origins as a list."""
+        """
+        Получает список разрешенных источников CORS.
+        
+        Returns:
+            list[str]: Список разрешенных origins
+        """
         return [origin.strip() for origin in self.cors_allowed_origins.split(",")]
 
 
