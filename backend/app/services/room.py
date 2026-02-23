@@ -1,3 +1,7 @@
+"""
+Модуль сервиса управления комнатами и клиентами.
+"""
+
 import asyncio
 from dataclasses import dataclass
 from uuid import UUID
@@ -9,15 +13,28 @@ from app.services.video_processing.face_analysis_pipeline import OneFaceMetricsA
 
 
 class RoomNotFoundError(Exception):
+    """Исключение, выбрасываемое при отсутствии комнаты."""
     pass
 
 
 class ClientNotFoundError(Exception):
+    """Исключение, выбрасываемое при отсутствии клиента."""
     pass
 
 
 @dataclass
 class Client:
+    """
+    Представляет клиента в комнате для видеопотока.
+    
+    Attributes:
+        id_: Уникальный идентификатор клиента
+        name: Имя клиента (опционально)
+        src_frame: Исходный кадр
+        prc_frame: Обработанный кадр
+        metrics: Результаты анализа лица
+        _frame_queue: Очередь для передачи кадров
+    """
     id_: UUID
     name: str | None = None
     src_frame: MatLike | None = None
@@ -26,6 +43,12 @@ class Client:
     _frame_queue: asyncio.Queue | None = None
 
     def get_frame_queue(self) -> asyncio.Queue:
+        """
+        Получает очередь кадров для клиента.
+        
+        Returns:
+            asyncio.Queue: Очередь для передачи видеокадров
+        """
         if self._frame_queue is None:
             self._frame_queue = asyncio.Queue(maxsize=1)
         return self._frame_queue
@@ -33,27 +56,71 @@ class Client:
 
 @dataclass
 class Room:
+    """
+    Представляет комнату для группового видеопотока.
+    
+    Attributes:
+        id_: Уникальный идентификатор комнаты
+        clients: Словарь клиентов в комнате
+    """
     id_: str
     clients: dict[UUID, Client]
 
 
 class RoomService:
+    """
+    Сервис управления комнатами и клиентами.
+    
+    Обеспечивает создание, поиск и удаление комнат и клиентов,
+    а также безопасный доступ к данным через asyncio.Lock.
+    """
+    
     def __init__(self):
+        """Инициализирует сервис управления комнатами."""
         print('init')
         self._rooms: dict[str, Room] = {}
         self._lock = asyncio.Lock()
 
     async def get_rooms(self) -> list[Room]:
+        """
+        Получает список всех активных комнат.
+        
+        Returns:
+            list[Room]: Список объектов Room
+        """
         async with self._lock:
             return list(self._rooms.values())
 
     async def add_client(self, room_id: str, client: Client) -> None:
+        """
+        Добавляет клиента в комнату.
+        
+        Если комната не существует, она будет создана.
+        
+        Args:
+            room_id: ID комнаты
+            client: Объект клиента для добавления
+        """
         async with self._lock:
             if room_id not in self._rooms:
                 self._rooms[room_id] = Room(id_=room_id, clients={})
             self._rooms[room_id].clients[client.id_] = client
 
     async def get_client(self, room_id: str, client_id: UUID) -> Client:
+        """
+        Получает клиента из комнаты.
+        
+        Args:
+            room_id: ID комнаты
+            client_id: ID клиента
+        
+        Returns:
+            Client: Объект клиента
+        
+        Raises:
+            RoomNotFoundError: Если комната не найдена
+            ClientNotFoundError: Если клиент не найден в комнате
+        """
         async with self._lock:
             if room_id not in self._rooms:
                 raise RoomNotFoundError(f"Room {room_id} not found")
@@ -62,6 +129,15 @@ class RoomService:
             return self._rooms[room_id].clients[client_id]
 
     async def remove_client(self, room_id: str, client: Client) -> None:
+        """
+        Удаляет клиента из комнаты.
+        
+        Если в комнате больше нет клиентов, комната также удаляется.
+        
+        Args:
+            room_id: ID комнаты
+            client: Объект клиента для удаления
+        """
         async with self._lock:
             if room_id not in self._rooms:
                 return
@@ -72,6 +148,18 @@ class RoomService:
                 del self._rooms[room_id]
 
     async def get_clients_in_room(self, room_id: str) -> list[Client]:
+        """
+        Получает всех клиентов в указанной комнате.
+        
+        Args:
+            room_id: ID комнаты
+        
+        Returns:
+            list[Client]: Список клиентов в комнате
+        
+        Raises:
+            RoomNotFoundError: Если комната не найдена
+        """
         async with self._lock:
             if room_id not in self._rooms:
                 raise RoomNotFoundError(f"Room {room_id} not found")
@@ -79,6 +167,21 @@ class RoomService:
 
 
 def get_room_service(request: Request = None, websocket: WebSocket = None) -> RoomService:
+    """
+    Получает экземпляр RoomService из состояния приложения FastAPI.
+    
+    Если сервис еще не инициализирован, создает новый экземпляр.
+    
+    Args:
+        request: Объект HTTP запроса FastAPI (опционально)
+        websocket: Объект WebSocket соединения (опционально)
+    
+    Returns:
+        RoomService: Экземпляр сервиса управления комнатами
+    
+    Raises:
+        RuntimeError: Если не передан ни request, ни websocket
+    """
     if request is not None:
         app: FastAPI = request.app
     elif websocket is not None:

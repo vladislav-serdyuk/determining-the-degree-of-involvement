@@ -1,3 +1,7 @@
+"""
+Модуль WebSocket эндпоинтов для видеопотока и стриминга.
+"""
+
 import asyncio
 import base64
 import warnings
@@ -22,6 +26,25 @@ async def stream(websocket: WebSocket, room_service: Annotated[RoomService, Depe
                  analyzer_service: Annotated[FaceAnalysisPipelineService, Depends(get_face_analysis_pipeline_service)],
                  room_id: Annotated[str, Path(max_length=40)],
                  name: Annotated[str | None, Query(max_length=30)] = None):
+    """
+    WebSocket эндпоинт для получения видеопотока и анализа эмоций.
+
+    Клиент отправляет кадры в формате base64, сервер обрабатывает их и возвращает
+    результаты анализа (эмоции, bounding boxes, EAR, HeadPose).
+
+    Args:
+        websocket: WebSocket соединение
+        room_service: Сервис управления комнатами
+        analyzer_service: Сервис анализа лиц и эмоций
+        room_id: ID комнаты
+        name: Имя клиента (опционально)
+
+    Returns:
+        JSON с обработанным изображением и результатами анализа в формате base64
+
+    Raises:
+        WebSocketDisconnect: При закрытии соединения клиентом
+    """
     engagement_calculator = EngagementCalculator()   # per-session экземпляр
     await websocket.accept()
     client: Client = Client(id_=uuid4(), name=name)
@@ -87,6 +110,24 @@ async def stream(websocket: WebSocket, room_service: Annotated[RoomService, Depe
 @stream_router.websocket('/ws/rooms/{room_id}/clients/{client_id}/output_stream')
 async def client_stream(websocket: WebSocket, room_id: Annotated[str, Path(max_length=40)], client_id: UUID,
                         room_service: Annotated[RoomService, Depends(get_room_service)]):
+    """
+    WebSocket эндпоинт для получения обработанного видеопотока конкретного клиента.
+
+    Позволяет получать исходный и обработанный кадры для отображения клиенту.
+
+    Args:
+        websocket: WebSocket соединение
+        room_id: ID комнаты
+        client_id: ID клиента-источника видеопотока
+        room_service: Сервис управления комнатами
+
+    Returns:
+        JSON с исходным и обработанным изображением в формате base64
+
+    Raises:
+        WebSocketDisconnect: При закрытии соединения клиентом
+        HTTPException 404: Если комната или клиент не найдены
+    """
     await websocket.accept()
     try:
         client = await room_service.get_client(room_id, client_id)
