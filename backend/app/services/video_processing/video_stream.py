@@ -55,5 +55,7 @@ def process_video_stream(video_stream: cv2.VideoCapture,
                 emotions.append(emotion_dict)
             yield analysis_result.image, emotions
     finally:
-        if created_pipeline is not None:
-            created_pipeline.emotion_recognizer.reset()
+        if use_inner_models:
+            face_detector.close()
+            emotion_recognizer.reset()
+            del face_analyze_pipeline
