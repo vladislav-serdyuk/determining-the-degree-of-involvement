@@ -30,8 +30,8 @@ except ImportError as e:
 # Импорт модулей EAR и HeadPose (доп.)
 EAR_HEADPOSE_AVAILABLE = False
 try:
-    from app.services import EyeAspectRatioAnalyzer, classify_attention_by_ear
-    from app.services import HeadPoseEstimator, classify_attention_state
+    from services.video_processing import EyeAspectRatioAnalyzer, classify_attention_by_ear
+    from services.video_processing import HeadPoseEstimator, classify_attention_state
 
     EAR_HEADPOSE_AVAILABLE = True
 except ImportError:

@@ -1,7 +1,7 @@
 from uuid import UUID
-from functools import lru_cache
 
 from cv2.typing import MatLike
+from fastapi import Request, WebSocket, FastAPI
 
 from .face_analysis_pipeline import FaceAnalysisPipeline, FaceAnalizResult, make_face_analysis_pipeline
 
@@ -15,6 +15,14 @@ class FaceAnalysisPipelineService:
             self._analyzers[client_id] = make_face_analysis_pipeline()
         return self._analyzers[client_id].analyze(image)
 
-@lru_cache()
-def get_face_analysis_pipeline_service():
-    return FaceAnalysisPipelineService()
+
+def get_face_analysis_pipeline_service(request: Request = None, websocket: WebSocket = None) -> FaceAnalysisPipelineService:
+    if request is not None:
+        app: FastAPI = request.app
+    elif websocket is not None:
+        app: FastAPI = websocket.app
+    else:
+        raise RuntimeError('get_face_analysis_pipeline_service expected "request" or "websocket" arg, got Nones')
+    if not hasattr(app.state, 'face_analysis_pipeline_service'):
+        app.state.face_analysis_pipeline_service = FaceAnalysisPipelineService()
+    return app.state.face_analysis_pipeline_service
