@@ -15,7 +15,6 @@ Real-time emotion detection system with FastAPI backend and Streamlit frontend.
 
 ```bash
 # Run backend
-cd backend
 docker compose up -d --build 
 ```
 
