@@ -9,7 +9,6 @@ from app.api.room import room_router
 from app.api.stream import stream_router
 from app.core.config import settings
 
-
 app = FastAPI(
     title="API распознавания эмоций",
     description="REST API для детекции лиц и распознавания эмоций в реальном времени",

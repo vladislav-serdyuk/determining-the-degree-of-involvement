@@ -57,7 +57,7 @@ cd frontend && streamlit run emotion_detection_app.py
 To test server state just use `http://localhost:8000/health` in your browser and `http://localhost:8000/docs` to check
 generated documentation.
 
-To try API without streamlit app you need to open `../tests/test_ws_stream.html` page with browser 
+To try API without streamlit app you need to open `../tests/test_ws_stream.html` page with browser
 and click **Connect**, **Start Video** buttons.
 
 > The server must be started before.

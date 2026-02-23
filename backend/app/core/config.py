@@ -4,8 +4,6 @@
 Загружает настройки из переменных окружения и файла .env.
 """
 
-from pathlib import Path
-
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -25,7 +23,7 @@ class Settings(BaseSettings):
         ear_*: Параметры анализа Eye Aspect Ratio
         head_pitch_*/head_yaw_*: Пороги для классификации позы головы
     """
-    
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
