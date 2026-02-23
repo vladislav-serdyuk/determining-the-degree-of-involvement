@@ -10,8 +10,8 @@ import numpy as np
 from cv2 import error
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, status, Query, Path
 
-from services.room import RoomService, Client, RoomNotFoundError, ClientNotFoundError, get_room_service
-from services.video_processing import get_face_analysis_pipeline_service, FaceAnalysisPipelineService
+from app.services.room import RoomService, Client, RoomNotFoundError, ClientNotFoundError, get_room_service
+from app.services.video_processing import get_face_analysis_pipeline_service, FaceAnalysisPipelineService
 
 stream_router = APIRouter()
 

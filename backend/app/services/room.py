@@ -5,7 +5,7 @@ from uuid import UUID
 from cv2.typing import MatLike
 from fastapi import Request, WebSocket, FastAPI
 
-from services.video_processing.face_analysis_pipeline import OneFaceMetricsAnalizResult
+from app.services.video_processing.face_analysis_pipeline import OneFaceMetricsAnalizResult
 
 
 class RoomNotFoundError(Exception):

@@ -4,12 +4,12 @@ from uuid import uuid4
 import pytest
 from httpx import AsyncClient, ASGITransport
 
-from services.room import RoomNotFoundError
+from app.services.room import RoomNotFoundError
 
 
 @pytest.fixture
 def mock_room_service():
-    from services.room import RoomService
+    from app.services.room import RoomService
     mock_service = MagicMock(spec=RoomService)
     mock_service.get_rooms = AsyncMock(return_value=[])
     mock_service.get_clients_in_room = AsyncMock(return_value=[])
@@ -18,7 +18,7 @@ def mock_room_service():
 
 @pytest.mark.asyncio
 async def test_health_check():
-    from main import app
+    from app.main import app
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         response = await client.get("/health")
@@ -30,13 +30,13 @@ async def test_health_check():
 
 @pytest.mark.asyncio
 async def test_get_rooms_empty():
-    from services.room import RoomService
+    from app.services.room import RoomService
 
     mock_service = MagicMock(spec=RoomService)
     mock_service.get_rooms = AsyncMock(return_value=[])
 
-    from main import app
-    from services.room import get_room_service
+    from app.main import app
+    from app.services.room import get_room_service
     app.dependency_overrides[get_room_service] = lambda: mock_service
 
     transport = ASGITransport(app=app)
@@ -50,14 +50,14 @@ async def test_get_rooms_empty():
 
 @pytest.mark.asyncio
 async def test_get_rooms_with_data():
-    from services.room import RoomService, Room
+    from app.services.room import RoomService, Room
 
     mock_service = MagicMock(spec=RoomService)
     mock_room = Room(id_="test_room", clients={})
     mock_service.get_rooms = AsyncMock(return_value=[mock_room])
 
-    from main import app
-    from services.room import get_room_service
+    from app.main import app
+    from app.services.room import get_room_service
     app.dependency_overrides[get_room_service] = lambda: mock_service
 
     transport = ASGITransport(app=app)
@@ -71,14 +71,14 @@ async def test_get_rooms_with_data():
 
 @pytest.mark.asyncio
 async def test_get_clients_in_room_success():
-    from services.room import RoomService, Client as RoomClient
+    from app.services.room import RoomService, Client as RoomClient
 
     mock_service = MagicMock(spec=RoomService)
     test_client = RoomClient(id_=uuid4(), name="test_client")
     mock_service.get_clients_in_room = AsyncMock(return_value=[test_client])
 
-    from main import app
-    from services.room import get_room_service
+    from app.main import app
+    from app.services.room import get_room_service
     app.dependency_overrides[get_room_service] = lambda: mock_service
 
     transport = ASGITransport(app=app)
@@ -94,13 +94,13 @@ async def test_get_clients_in_room_success():
 
 @pytest.mark.asyncio
 async def test_get_clients_in_room_not_found():
-    from services.room import RoomService
+    from app.services.room import RoomService
 
     mock_service = MagicMock(spec=RoomService)
     mock_service.get_clients_in_room = AsyncMock(side_effect=RoomNotFoundError("Room not found"))
 
-    from main import app
-    from services.room import get_room_service
+    from app.main import app
+    from app.services.room import get_room_service
     app.dependency_overrides[get_room_service] = lambda: mock_service
 
     transport = ASGITransport(app=app)
