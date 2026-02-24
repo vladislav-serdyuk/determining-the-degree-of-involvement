@@ -155,8 +155,8 @@ def main():
         if cv2.waitKey(1) & 0xFF == ord("q"):
             break
 
-    print(f'MAE pitch:', sum(diffs_pitch) / len(diffs_pitch))
-    print(f'MAE yaw:', sum(diffs_yaw) / len(diffs_yaw))
+    print('MAE pitch:', sum(diffs_pitch) / len(diffs_pitch))
+    print('MAE yaw:', sum(diffs_yaw) / len(diffs_yaw))
     cap.release()
     cv2.destroyAllWindows()
 

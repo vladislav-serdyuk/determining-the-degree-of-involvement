@@ -29,8 +29,8 @@ except ImportError as e:
 # Импорт модулей EAR и HeadPose (доп.)
 EAR_HEADPOSE_AVAILABLE = False
 try:
-    from app.services.video_processing import EyeAspectRatioAnalyzer, classify_attention_by_ear
-    from app.services.video_processing import HeadPoseEstimator, classify_attention_state
+    from app.services.video_processing import EyeAspectRatioAnalyzer
+    from app.services.video_processing import HeadPoseEstimator
 
     EAR_HEADPOSE_AVAILABLE = True
 except ImportError:
@@ -369,7 +369,7 @@ class VideoFileProcessor:
             cap.release()
             return frames
 
-        except Exception as e:
+        except Exception:
             return []
 
 

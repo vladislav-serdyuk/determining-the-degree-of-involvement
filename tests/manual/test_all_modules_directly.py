@@ -191,7 +191,7 @@ class FaceMeshAnalyzer:
             if ear_result:
                 # Расчёт частоты моргания (предполагаемые ~30 FPS)
                 # TODO: уточнить метрику
-                blink_rate = ear_result.blink_count * 2
+                # blink_rate = ear_result.blink_count * 2
                 results['eyes'] = ear_result
 
             results['face_detected'] = True
@@ -283,14 +283,14 @@ def log_frame_results(log_file, frame_count, results, fps, timestamp):
 
         # Эмоция
         if results['emotion']:
-            log_file.write(f"\n[EMOTION]\n")
+            log_file.write("\n[EMOTION]\n")
             log_file.write(f"  Detected: {results['emotion']}\n")
             log_file.write(f"  Confidence: {results['emotion_confidence']:.4f}\n")
 
         # Head Pose
         if results['head_pose']:
             hp = results['head_pose']
-            log_file.write(f"\n[HEAD POSE]\n")
+            log_file.write("\n[HEAD POSE]\n")
             log_file.write(f"  Pitch (up/down): {hp.pitch:>7.2f}°\n")
             log_file.write(f"  Yaw (left/right): {hp.yaw:>7.2f}°\n")
             log_file.write(f"  Roll (tilt): {hp.roll:>7.2f}°\n")
@@ -299,7 +299,7 @@ def log_frame_results(log_file, frame_count, results, fps, timestamp):
         # Eyes / EAR
         if results['eyes']:
             eyes = results['eyes']
-            log_file.write(f"\n[EYE ANALYSIS]\n")
+            log_file.write("\n[EYE ANALYSIS]\n")
             log_file.write(f"  Left EAR: {eyes.left_ear:.4f}\n")
             log_file.write(f"  Right EAR: {eyes.right_ear:.4f}\n")
             log_file.write(f"  Average EAR: {eyes.avg_ear:.4f}\n")
@@ -336,18 +336,12 @@ def main():
     print(f"\nЛог записывается в файл: {log_filename}")
 
     # Проверка CUDA
-    device = 'cpu'
-    try:
-        if torch.cuda.is_available():
-            device = 'cuda'
-            print(f"CUDA доступна, используем GPU")
-            log_file.write(f"\nDevice: CUDA (GPU)\n")
-        else:
-            print(f"CUDA недоступна, используем CPU")
-            log_file.write(f"\nDevice: CPU\n")
-    except:
-        print(f"CUDA недоступна, используем CPU")
-        log_file.write(f"\nDevice: CPU\n")
+    if torch.cuda.is_available():
+        print("CUDA доступна, используем GPU")
+        log_file.write("\nDevice: CUDA (GPU)\n")
+    else:
+        print("CUDA недоступна, используем CPU")
+        log_file.write("\nDevice: CPU\n")
 
     log_file.write("=" * 80 + "\n\n")
     log_file.flush()

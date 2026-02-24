@@ -40,8 +40,8 @@ class FaceAnalysisPipelineService:
 
 
 def get_face_analysis_pipeline_service(
-    request: Request = None,  # type: ignore[assignment]
-    websocket: WebSocket = None,  # type: ignore[assignment]
+        request: Request = None,  # type: ignore[assignment]
+        websocket: WebSocket = None,  # type: ignore[assignment]
 ) -> FaceAnalysisPipelineService:
     """
     Получает экземпляр FaceAnalysisPipelineService из состояния приложения FastAPI.
