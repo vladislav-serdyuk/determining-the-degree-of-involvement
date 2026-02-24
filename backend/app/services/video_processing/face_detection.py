@@ -44,7 +44,7 @@ class FaceDetector:
         min_detection_confidence=settings.face_detection_min_confidence
     )
 
-    def __init__(self, *, margin: int = None):
+    def __init__(self, *, margin: int | None = None):
         """
 
         :param margin: Добавочный отступ к bbox, предсказанный моделью
@@ -61,6 +61,14 @@ class FaceDetector:
             raise TypeError(f'Type of "margin" should be int, got {type(margin).__name__}')
         if margin < 0:
             raise ValueError('"margin" should be >= 0')
+
+    @staticmethod
+    def _validate_confidence(min_detection_confidence: float) -> None:
+        """Валидация confidence"""
+        if not isinstance(min_detection_confidence, (float, int)):
+            raise TypeError(f'Type of "min_detection_confidence" should be float, got {type(min_detection_confidence).__name__}')
+        if not 0 <= min_detection_confidence <= 1:
+            raise ValueError('"min_detection_confidence" should be in [0, 1]')
 
     def set_margin(self, margin: int):
         self._validate_margin(margin)
@@ -113,11 +121,11 @@ class FaceDetector:
 
 
 if __name__ == '__main__':
-    from services.video_processing.video_stream import process_video_stream
+    from app.services.video_processing.video_stream import process_video_stream
 
     print('Using camera 0')
     cap = cv2.VideoCapture(0)
-    fps_history = deque()
+    fps_history: deque[float] = deque()
     FPS_HISTORY_LEN = 3  # для более гладкого fps, будет выводится средние из последних FPS_HISTORY_LEN измерений
 
     for _ in range(FPS_HISTORY_LEN):

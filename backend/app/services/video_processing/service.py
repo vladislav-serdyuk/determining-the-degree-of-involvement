@@ -39,8 +39,10 @@ class FaceAnalysisPipelineService:
         return self._analyzers[client_id].analyze(image)
 
 
-def get_face_analysis_pipeline_service(request: Request = None,
-                                       websocket: WebSocket = None) -> FaceAnalysisPipelineService:
+def get_face_analysis_pipeline_service(
+    request: Request = None,  # type: ignore[assignment]
+    websocket: WebSocket = None,  # type: ignore[assignment]
+) -> FaceAnalysisPipelineService:
     """
     Получает экземпляр FaceAnalysisPipelineService из состояния приложения FastAPI.
     
@@ -56,10 +58,11 @@ def get_face_analysis_pipeline_service(request: Request = None,
     Raises:
         RuntimeError: Если не передан ни request, ни websocket
     """
+    app: FastAPI
     if request is not None:
-        app: FastAPI = request.app
+        app = request.app
     elif websocket is not None:
-        app: FastAPI = websocket.app
+        app = websocket.app
     else:
         raise RuntimeError('get_face_analysis_pipeline_service expected "request" or "websocket" arg, got Nones')
     if not hasattr(app.state, 'face_analysis_pipeline_service'):

@@ -33,6 +33,7 @@ def process_video_stream(video_stream: cv2.VideoCapture,
                 raise CaptureReadError('Failed to get image from "video_stream"')
             if flip_h:
                 img = cv2.flip(img, 1)
+            assert face_analyze_pipeline is not None
             analysis_result = face_analyze_pipeline.analyze(img)
             emotions = []
             for metric in analysis_result.metrics:

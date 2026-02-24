@@ -39,7 +39,7 @@ class EyeAspectRatioAnalyzeResult:
 class EyeAspectRatioAnalyzer:
     """Анализ состояния глаз с использованием Eye Aspect Ratio (EAR)"""
 
-    def __init__(self, *, ear_threshold: float = None, consec_frames: int = None):
+    def __init__(self, *, ear_threshold: float | None = None, consec_frames: int | None = None):
         """
         Args:
             ear_threshold: Порог EAR для детекции закрытых глаз (обычно 0.25)
@@ -49,8 +49,8 @@ class EyeAspectRatioAnalyzer:
         self.consec_frames = consec_frames if consec_frames is not None else settings.ear_consec_frames
 
         # История для детекции моргания (для каждого лица отдельно)
-        self.blink_counters = {}  # {face_id: counter}
-        self.blink_totals = {}  # {face_id: total_blinks}
+        self.blink_counters: dict[int, int] = {}  # {face_id: counter}
+        self.blink_totals: dict[int, int] = {}  # {face_id: total_blinks}
         self.ear_history: dict[int, deque[float]] = {}  # {face_id: deque([ear_values])}
 
         print(f"EyeAspectRatioAnalyzer инициализирован: threshold={self.ear_threshold}, frames={self.consec_frames}")
@@ -152,7 +152,7 @@ class EyeAspectRatioAnalyzer:
                                                self.blink_totals[face_id]
                                            ))
 
-    def reset(self, face_id: int = None):
+    def reset(self, face_id: int | None = None):
         """Сброс счётчиков моргания"""
         if face_id is None:
             # Сброс всех лиц
