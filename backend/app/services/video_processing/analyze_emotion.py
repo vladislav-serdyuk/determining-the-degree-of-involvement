@@ -1,9 +1,10 @@
 from collections import deque
 from dataclasses import dataclass
+from typing import cast
 
 import cv2
 import torch
-from emotiefflib.facial_analysis import EmotiEffLibRecognizer
+from emotiefflib.facial_analysis import EmotiEffLibRecognizer  # type: ignore[import-untyped]
 
 from app.core.config import settings
 
@@ -45,7 +46,7 @@ class EmotionRecognizer:
                                'Sad', 'Surprise', 'Neutral', 'Contempt']
 
         # Параметры сглаживания
-        self.history = deque(maxlen=actual_window_size)
+        self.history: deque[dict[str, float | str]] = deque(maxlen=actual_window_size)
 
         # Параметры фильтрации
         self.confidence_threshold = actual_confidence
@@ -116,16 +117,16 @@ class EmotionRecognizer:
 
             # Шаг 2: Temporal smoothing
             if len(self.history) >= 3:
-                emotion_votes = {}
+                emotion_votes: dict[str, float] = {}
                 total_weight: float = 0.0
 
                 for i, hist_item in enumerate(self.history):
                     weight = (i + 1) / len(self.history)
-                    emo = hist_item['emotion']
-                    conf = hist_item['confidence']
+                    emo = cast(str, hist_item['emotion'])
+                    conf = cast(float, hist_item['confidence'])
 
                     if emo not in emotion_votes:
-                        emotion_votes[emo] = 0
+                        emotion_votes[emo] = 0.0
                     emotion_votes[emo] += weight * conf
                     total_weight += weight
 
