@@ -84,9 +84,7 @@ class HeadPoseEstimator:
 
         return pitch, yaw, roll
 
-    def estimate(
-        self, face_landmarks, image_width: int, image_height: int
-    ) -> HeadPoseEstimatResult | None:
+    def estimate(self, face_landmarks, image_width: int, image_height: int) -> HeadPoseEstimatResult | None:
         """
         Оценивает позу головы на основе landmarks точек (для одного лица).
 
@@ -174,10 +172,7 @@ def classify_attention_state(
     abs_yaw = abs(yaw)
 
     # Критерии внимания (пороговые значения)
-    if (
-        abs_pitch < settings.head_pitch_highly_attentive
-        and abs_yaw < settings.head_yaw_highly_attentive
-    ):
+    if abs_pitch < settings.head_pitch_highly_attentive and abs_yaw < settings.head_yaw_highly_attentive:
         return "Highly Attentive"  # Прямой взгляд на экран
     elif abs_pitch < settings.head_pitch_attentive and abs_yaw < settings.head_yaw_attentive:
         return "Attentive"  # Небольшое отклонение

@@ -69,9 +69,7 @@ def get_face_analysis_pipeline_service(
     elif websocket is not None:
         app = websocket.app
     else:
-        raise RuntimeError(
-            'get_face_analysis_pipeline_service expected "request" or "websocket" arg, got Nones'
-        )
+        raise RuntimeError('get_face_analysis_pipeline_service expected "request" or "websocket" arg, got Nones')
     if not hasattr(app.state, "face_analysis_pipeline_service"):
         app.state.face_analysis_pipeline_service = FaceAnalysisPipelineService()
     return cast(FaceAnalysisPipelineService, app.state.face_analysis_pipeline_service)
