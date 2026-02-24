@@ -2,6 +2,7 @@
 Модуль сервиса пайплайна анализа лиц для FastAPI.
 """
 
+from typing import cast
 from uuid import UUID
 
 from cv2.typing import MatLike
@@ -73,4 +74,4 @@ def get_face_analysis_pipeline_service(
         )
     if not hasattr(app.state, "face_analysis_pipeline_service"):
         app.state.face_analysis_pipeline_service = FaceAnalysisPipelineService()
-    return app.state.face_analysis_pipeline_service
+    return cast(FaceAnalysisPipelineService, app.state.face_analysis_pipeline_service)

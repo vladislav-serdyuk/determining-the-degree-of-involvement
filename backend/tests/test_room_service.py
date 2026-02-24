@@ -4,8 +4,8 @@ import pytest
 
 from app.services.room import (
     Client,
-    RoomNotFoundError,
     ClientNotFoundError,
+    RoomNotFoundError,
 )
 
 
