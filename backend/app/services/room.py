@@ -4,6 +4,7 @@
 
 import asyncio
 from dataclasses import dataclass
+from typing import cast
 from uuid import UUID
 
 from cv2.typing import MatLike
@@ -198,4 +199,4 @@ def get_room_service(
         raise RuntimeError('get_room_service expected "request" or "websocket" arg, got Nones')
     if not hasattr(app.state, "room_service"):
         app.state.room_service = RoomService()
-    return app.state.room_service
+    return cast(RoomService, app.state.room_service)
