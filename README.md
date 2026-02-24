@@ -15,7 +15,7 @@ Real-time emotion detection system with FastAPI backend and Streamlit frontend.
 
 ```bash
 # Run backend
-docker compose up -d --build 
+docker compose up -d --build
 ```
 
 ### Manual
@@ -23,7 +23,7 @@ docker compose up -d --build
 #### Install dependencies
 
 ```bash
-cd backend && pip install -r requirements.txt
+cd backend && pip install .
 cd ../frontend && pip install -r requirements.txt
 ```
 
@@ -53,6 +53,47 @@ cd frontend && streamlit run emotion_detection_app.py
 ```
 
 ### Tests
+
+```bash
+cd backend
+./scripts/test.sh
+```
+
+Or:
+
+```bash
+cd backend
+python -m pytest
+```
+
+### Linting
+
+```bash
+cd backend
+./scripts/lint.sh
+```
+
+Or:
+
+```bash
+cd backend
+ruff check .
+mypy . --ignore-missing-imports
+```
+
+### Formatting
+
+```bash
+cd backend
+./scripts/format.sh
+```
+
+Or:
+
+```bash
+cd backend
+ruff format .
+```
 
 To test server state just use `http://localhost:8000/health` in your browser and `http://localhost:8000/docs` to check
 generated documentation.
