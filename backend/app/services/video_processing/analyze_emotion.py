@@ -117,7 +117,7 @@ class EmotionRecognizer:
             # Шаг 2: Temporal smoothing
             if len(self.history) >= 3:
                 emotion_votes = {}
-                total_weight = 0
+                total_weight: float = 0.0
 
                 for i, hist_item in enumerate(self.history):
                     weight = (i + 1) / len(self.history)

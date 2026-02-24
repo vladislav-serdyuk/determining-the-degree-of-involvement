@@ -39,8 +39,8 @@ class HeadPoseEstimatResult:
     pitch: float
     yaw: float
     roll: float
-    rotation_vec: tuple[float]
-    translation_vec: tuple[float]
+    rotation_vec: tuple[float, float, float]
+    translation_vec: tuple[float, float, float]
     attention_state: Literal["Highly Attentive", "Attentive", "Distracted", "Very Distracted"]
 
 
@@ -135,13 +135,12 @@ class HeadPoseEstimator:
             # Извлечение углов Эйлера
             pitch, yaw, roll = self._rotation_matrix_to_angles(rotation_mat)
 
-            return HeadPoseEstimatResult(pitch=pitch, yaw=yaw, roll=roll, rotation_vec=tuple(rotation_vec.flatten()),
-                                         translation_vec=tuple(translation_vec.flatten()),
-                                         attention_state=classify_attention_state(
-                                             pitch,
-                                             yaw,
-                                             roll
-                                         ))
+            return HeadPoseEstimatResult(
+                pitch=pitch, yaw=yaw, roll=roll,
+                rotation_vec=tuple(rotation_vec.flatten().tolist()),  # type: ignore[arg-type]
+                translation_vec=tuple(translation_vec.flatten().tolist()),  # type: ignore[arg-type]
+                attention_state=classify_attention_state(pitch, yaw, roll)
+            )
 
         return None
 

@@ -166,7 +166,10 @@ class RoomService:
             return list(self._rooms[room_id].clients.values())
 
 
-def get_room_service(request: Request = None, websocket: WebSocket = None) -> RoomService:
+def get_room_service(
+    request: Request = None,  # type: ignore[assignment]
+    websocket: WebSocket = None,  # type: ignore[assignment]
+) -> RoomService:
     """
     Получает экземпляр RoomService из состояния приложения FastAPI.
     
@@ -182,10 +185,11 @@ def get_room_service(request: Request = None, websocket: WebSocket = None) -> Ro
     Raises:
         RuntimeError: Если не передан ни request, ни websocket
     """
+    app: FastAPI
     if request is not None:
-        app: FastAPI = request.app
+        app = request.app
     elif websocket is not None:
-        app: FastAPI = websocket.app
+        app = websocket.app
     else:
         raise RuntimeError('get_room_service expected "request" or "websocket" arg, got Nones')
     if not hasattr(app.state, 'room_service'):
