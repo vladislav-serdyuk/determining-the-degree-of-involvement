@@ -17,16 +17,6 @@ mp_face_mesh = mp.solutions.face_mesh
 mp_drawing = mp.solutions.drawing_utils
 mp_drawing_styles = mp.solutions.drawing_styles
 
-# Импорт модулей анализа (опциональные)
-try:
-    from .analyze_ear import EyeAspectRatioAnalyzer, classify_attention_by_ear
-    from .analyze_head_pose import HeadPoseEstimator, classify_attention_state
-
-    EAR_AVAILABLE = True
-except ImportError:
-    EAR_AVAILABLE = False
-    print("Модули analyze_ear и/или analyze_head_pose не найдены. EAR и HeadPose анализ будет недоступен.")
-
 
 @dataclass
 class FaceDetectResult:
@@ -66,7 +56,8 @@ class FaceDetector:
     def _validate_confidence(min_detection_confidence: float) -> None:
         """Валидация confidence"""
         if not isinstance(min_detection_confidence, (float, int)):
-            raise TypeError(f'Type of "min_detection_confidence" should be float, got {type(min_detection_confidence).__name__}')
+            raise TypeError(
+                f'Type of "min_detection_confidence" should be float, got {type(min_detection_confidence).__name__}')
         if not 0 <= min_detection_confidence <= 1:
             raise ValueError('"min_detection_confidence" should be in [0, 1]')
 

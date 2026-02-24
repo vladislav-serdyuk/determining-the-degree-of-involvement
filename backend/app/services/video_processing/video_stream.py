@@ -5,7 +5,8 @@ from .face_analysis_pipeline import FaceAnalysisPipeline
 from .face_detection import FaceDetector
 
 
-class CaptureReadError(Exception): pass
+class CaptureReadError(Exception):
+    pass
 
 
 def process_video_stream(video_stream: cv2.VideoCapture,

@@ -167,8 +167,8 @@ class RoomService:
 
 
 def get_room_service(
-    request: Request = None,  # type: ignore[assignment]
-    websocket: WebSocket = None,  # type: ignore[assignment]
+        request: Request = None,  # type: ignore[assignment]
+        websocket: WebSocket = None,  # type: ignore[assignment]
 ) -> RoomService:
     """
     Получает экземпляр RoomService из состояния приложения FastAPI.

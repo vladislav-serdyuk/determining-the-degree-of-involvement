@@ -57,7 +57,7 @@ class EmotionRecognizer:
         if not isinstance(window_size, int):
             raise TypeError(f'Type of "window_size" should be int, got {type(window_size).__name__}')
         if window_size < 0:
-            raise ValueError(f'"window_size" should be >= 0')
+            raise ValueError('"window_size" should be >= 0')
 
     def set_window_size(self, window_size: int):
         self._validate_window_size(window_size)
@@ -69,7 +69,7 @@ class EmotionRecognizer:
             raise TypeError(
                 f'Type of "confidence_threshold" should be float, got {type(confidence_threshold).__name__}')
         if confidence_threshold < 0 or confidence_threshold > 1:
-            raise ValueError(f'"confidence_threshold" should be in [0;1]')
+            raise ValueError('"confidence_threshold" should be in [0;1]')
 
     def set_confidence_threshold(self, confidence_threshold: float):
         self._validate_confidence_threshold(confidence_threshold)
@@ -80,7 +80,7 @@ class EmotionRecognizer:
         if not isinstance(ambiguity_threshold, (float, int)):
             raise TypeError(f'Type of "ambiguity_threshold" should be float, got {type(ambiguity_threshold).__name__}')
         if ambiguity_threshold < 0 or ambiguity_threshold > 1:
-            raise ValueError(f'"ambiguity_threshold" should be in [0;1]')
+            raise ValueError('"ambiguity_threshold" should be in [0;1]')
 
     def set_ambiguity_threshold(self, ambiguity_threshold: float):
         self._validate_ambiguity_threshold(ambiguity_threshold)
