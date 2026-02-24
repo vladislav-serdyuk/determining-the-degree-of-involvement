@@ -27,9 +27,7 @@ async def get_rooms(room_service: Annotated[RoomService, Depends(get_room_servic
 
 
 @room_router.get("/rooms/{room_id}/clients")
-async def get_clients(
-    room_id: str, room_service: Annotated[RoomService, Depends(get_room_service)]
-):
+async def get_clients(room_id: str, room_service: Annotated[RoomService, Depends(get_room_service)]):
     """
     Получение списка клиентов в указанной комнате.
 

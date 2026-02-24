@@ -124,9 +124,7 @@ if __name__ == "__main__":
     print("Using camera 0")
     cap = cv2.VideoCapture(0)
     fps_history: deque[float] = deque()
-    FPS_HISTORY_LEN = (
-        3  # для более гладкого fps, будет выводится средние из последних FPS_HISTORY_LEN измерений
-    )
+    FPS_HISTORY_LEN = 3  # для более гладкого fps, будет выводится средние из последних FPS_HISTORY_LEN измерений
 
     for _ in range(FPS_HISTORY_LEN):
         fps_history.append(0.0)

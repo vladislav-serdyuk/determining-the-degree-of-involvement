@@ -129,11 +129,7 @@ class FaceAnalysisPipeline:
                 ear = None
 
             # 3. HeadPose анализ (если доступен Face Mesh)
-            if (
-                self.head_pose_estimator
-                and face_mesh_results
-                and face_mesh_results.multi_face_landmarks
-            ):
+            if self.head_pose_estimator and face_mesh_results and face_mesh_results.multi_face_landmarks:
                 if face_idx < len(face_mesh_results.multi_face_landmarks):
                     face_landmarks = face_mesh_results.multi_face_landmarks[face_idx]
                     head_pose_result = self.head_pose_estimator.estimate(face_landmarks, w, h)
@@ -168,24 +164,18 @@ class FaceAnalysisPipeline:
 
         # Эмоция
         emotion_text = f"{result.emotion}: {result.confidence:.2f}"
-        cv2.putText(
-            image, emotion_text, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 255), 2
-        )
+        cv2.putText(image, emotion_text, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 255), 2)
 
         # EAR (если доступен)
         y_offset = y1 - 30
         if result.ear:
             ear_text = f"EAR: {result.ear.avg_ear:.3f}"
-            cv2.putText(
-                image, ear_text, (x1, y_offset), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 255, 255), 1
-            )
+            cv2.putText(image, ear_text, (x1, y_offset), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 255, 255), 1)
             y_offset -= 15
 
             if result.ear.is_blinking:
                 blink_text = "BLINK"
-                cv2.putText(
-                    image, blink_text, (x1, y_offset), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 255), 1
-                )
+                cv2.putText(image, blink_text, (x1, y_offset), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 255), 1)
                 y_offset -= 15
 
         # HeadPose (если доступен)

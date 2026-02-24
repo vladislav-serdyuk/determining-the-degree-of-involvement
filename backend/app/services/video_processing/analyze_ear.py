@@ -46,18 +46,14 @@ class EyeAspectRatioAnalyzer:
             consec_frames: Количество кадров подряд для подтверждения моргания
         """
         self.ear_threshold = ear_threshold if ear_threshold is not None else settings.ear_threshold
-        self.consec_frames = (
-            consec_frames if consec_frames is not None else settings.ear_consec_frames
-        )
+        self.consec_frames = consec_frames if consec_frames is not None else settings.ear_consec_frames
 
         # История для детекции моргания (для каждого лица отдельно)
         self.blink_counters: dict[int, int] = {}  # {face_id: counter}
         self.blink_totals: dict[int, int] = {}  # {face_id: total_blinks}
         self.ear_history: dict[int, deque[float]] = {}  # {face_id: deque([ear_values])}
 
-        print(
-            f"EyeAspectRatioAnalyzer инициализирован: threshold={self.ear_threshold}, frames={self.consec_frames}"
-        )
+        print(f"EyeAspectRatioAnalyzer инициализирован: threshold={self.ear_threshold}, frames={self.consec_frames}")
 
     def set_ear_threshold(self, ear_threshold: float):
         """Изменяет порог EAR без сброса счётчиков"""
@@ -95,9 +91,7 @@ class EyeAspectRatioAnalyzer:
             return 0.0
 
     @staticmethod
-    def _get_eye_coordinates(
-        landmarks, eye_indices: list[int], w: int, h: int
-    ) -> list[tuple[float, float]]:
+    def _get_eye_coordinates(landmarks, eye_indices: list[int], w: int, h: int) -> list[tuple[float, float]]:
         """Извлечение координат глаза из landmarks"""
 
         return [(landmarks[idx].x * w, landmarks[idx].y * h) for idx in eye_indices]
@@ -121,12 +115,8 @@ class EyeAspectRatioAnalyzer:
         landmarks = face_landmarks.landmark
 
         # Расчёт EAR для обоих глаз
-        left_eye_coords = self._get_eye_coordinates(
-            landmarks, LEFT_EYE_LANDMARKS, image_width, image_height
-        )
-        right_eye_coords = self._get_eye_coordinates(
-            landmarks, RIGHT_EYE_LANDMARKS, image_width, image_height
-        )
+        left_eye_coords = self._get_eye_coordinates(landmarks, LEFT_EYE_LANDMARKS, image_width, image_height)
+        right_eye_coords = self._get_eye_coordinates(landmarks, RIGHT_EYE_LANDMARKS, image_width, image_height)
 
         left_ear = self._calculate_ear(left_eye_coords)
         right_ear = self._calculate_ear(right_eye_coords)
@@ -179,9 +169,7 @@ class EyeAspectRatioAnalyzer:
             self.ear_history.pop(face_id, None)
 
 
-def classify_attention_by_ear(
-    avg_ear: float, blink_rate: float
-) -> Literal["Alert", "Normal", "Drowsy", "Very Drowsy"]:
+def classify_attention_by_ear(avg_ear: float, blink_rate: float) -> Literal["Alert", "Normal", "Drowsy", "Very Drowsy"]:
     """
     Классификация состояния внимания на основе EAR и частоты моргания.
 

@@ -35,9 +35,7 @@ stream_router = APIRouter()
 async def stream(
     websocket: WebSocket,
     room_service: Annotated[RoomService, Depends(get_room_service)],
-    analyzer_service: Annotated[
-        FaceAnalysisPipelineService, Depends(get_face_analysis_pipeline_service)
-    ],
+    analyzer_service: Annotated[FaceAnalysisPipelineService, Depends(get_face_analysis_pipeline_service)],
     room_id: Annotated[str, Path(max_length=40)],
     name: Annotated[str | None, Query(max_length=30)] = None,
 ):

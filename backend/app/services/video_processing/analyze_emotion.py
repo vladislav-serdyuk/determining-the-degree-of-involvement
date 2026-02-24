@@ -22,9 +22,7 @@ class EmotionRecognizer:
     if device == "cuda" and not torch.cuda.is_available():
         device = "cpu"
     recognizer = EmotiEffLibRecognizer(model_name=settings.emotion_model_name, device=device)
-    print(
-        f"EmotiEffLib + Advanced загружен: модель={settings.emotion_model_name}, устройство={device}"
-    )
+    print(f"EmotiEffLib + Advanced загружен: модель={settings.emotion_model_name}, устройство={device}")
 
     def __init__(self, *, window_size=None, confidence_threshold=None, ambiguity_threshold=None):
         """
@@ -33,18 +31,12 @@ class EmotionRecognizer:
             confidence_threshold: Минимальный порог уверенности
             ambiguity_threshold: Порог для амбивалентных эмоций
         """
-        actual_window_size = (
-            window_size if window_size is not None else settings.emotion_window_size
-        )
+        actual_window_size = window_size if window_size is not None else settings.emotion_window_size
         actual_confidence = (
-            confidence_threshold
-            if confidence_threshold is not None
-            else settings.emotion_confidence_threshold
+            confidence_threshold if confidence_threshold is not None else settings.emotion_confidence_threshold
         )
         actual_ambiguity = (
-            ambiguity_threshold
-            if ambiguity_threshold is not None
-            else settings.emotion_ambiguity_threshold
+            ambiguity_threshold if ambiguity_threshold is not None else settings.emotion_ambiguity_threshold
         )
 
         self._validate_window_size(actual_window_size)
@@ -72,9 +64,7 @@ class EmotionRecognizer:
     @staticmethod
     def _validate_window_size(window_size: int):
         if not isinstance(window_size, int):
-            raise TypeError(
-                f'Type of "window_size" should be int, got {type(window_size).__name__}'
-            )
+            raise TypeError(f'Type of "window_size" should be int, got {type(window_size).__name__}')
         if window_size < 0:
             raise ValueError('"window_size" should be >= 0')
 
@@ -98,9 +88,7 @@ class EmotionRecognizer:
     @staticmethod
     def _validate_ambiguity_threshold(ambiguity_threshold: float):
         if not isinstance(ambiguity_threshold, (float, int)):
-            raise TypeError(
-                f'Type of "ambiguity_threshold" should be float, got {type(ambiguity_threshold).__name__}'
-            )
+            raise TypeError(f'Type of "ambiguity_threshold" should be float, got {type(ambiguity_threshold).__name__}')
         if ambiguity_threshold < 0 or ambiguity_threshold > 1:
             raise ValueError('"ambiguity_threshold" should be in [0;1]')
 
@@ -121,9 +109,7 @@ class EmotionRecognizer:
             top_emotion = emotion[0]
 
             if scores is not None and len(scores) > 0:
-                confidence = (
-                    float(max(scores[0])) if hasattr(scores[0], "__iter__") else float(scores[0])
-                )
+                confidence = float(max(scores[0])) if hasattr(scores[0], "__iter__") else float(scores[0])
             else:
                 confidence = 1.0
 
