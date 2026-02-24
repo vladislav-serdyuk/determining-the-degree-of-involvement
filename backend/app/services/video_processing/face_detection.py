@@ -31,7 +31,7 @@ class FaceDetector:
 
     detector = mp_face_detection.FaceDetection(
         model_selection=settings.face_detection_model_selection,
-        min_detection_confidence=settings.face_detection_min_confidence
+        min_detection_confidence=settings.face_detection_min_confidence,
     )
 
     def __init__(self, *, margin: int | None = None):
@@ -57,7 +57,8 @@ class FaceDetector:
         """Валидация confidence"""
         if not isinstance(min_detection_confidence, (float, int)):
             raise TypeError(
-                f'Type of "min_detection_confidence" should be float, got {type(min_detection_confidence).__name__}')
+                f'Type of "min_detection_confidence" should be float, got {type(min_detection_confidence).__name__}'
+            )
         if not 0 <= min_detection_confidence <= 1:
             raise ValueError('"min_detection_confidence" should be in [0, 1]')
 
@@ -69,7 +70,7 @@ class FaceDetector:
         self._validate_confidence(min_detection_confidence)
         self.detector = mp_face_detection.FaceDetection(
             model_selection=settings.face_detection_model_selection,
-            min_detection_confidence=min_detection_confidence
+            min_detection_confidence=min_detection_confidence,
         )
 
     def detect(self, image: cv2.typing.MatLike) -> list[FaceDetectResult]:
@@ -102,8 +103,14 @@ class FaceDetector:
                         kp_y = int(keypoint.y * h)
                         keypoints.append((kp_x, kp_y))
 
-                faces.append(FaceDetectResult(bbox=(x1, y1, x2, y2), crop=face_crop, confidence=detection.score[0],
-                                              keypoints=keypoints))
+                faces.append(
+                    FaceDetectResult(
+                        bbox=(x1, y1, x2, y2),
+                        crop=face_crop,
+                        confidence=detection.score[0],
+                        keypoints=keypoints,
+                    )
+                )
 
         return faces
 
@@ -111,22 +118,31 @@ class FaceDetector:
         self.detector.close()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     from app.services.video_processing.video_stream import process_video_stream
 
-    print('Using camera 0')
+    print("Using camera 0")
     cap = cv2.VideoCapture(0)
     fps_history: deque[float] = deque()
-    FPS_HISTORY_LEN = 3  # для более гладкого fps, будет выводится средние из последних FPS_HISTORY_LEN измерений
+    FPS_HISTORY_LEN = (
+        3  # для более гладкого fps, будет выводится средние из последних FPS_HISTORY_LEN измерений
+    )
 
     for _ in range(FPS_HISTORY_LEN):
         fps_history.append(0.0)
     try:
         start_time = time()
         for img, emotions in process_video_stream(cap, flip_h=True):
-            cv2.putText(img, f'FPS: {round(sum(fps_history) / FPS_HISTORY_LEN)}', (5, 20),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 255), 2)
-            cv2.imshow('Test', img)
+            cv2.putText(
+                img,
+                f"FPS: {round(sum(fps_history) / FPS_HISTORY_LEN)}",
+                (5, 20),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.6,
+                (255, 0, 255),
+                2,
+            )
+            cv2.imshow("Test", img)
             if cv2.waitKey(1) & 0xFF == 27:
                 break  # esc to quit
             fps = 1 / (time() - start_time)
@@ -134,7 +150,7 @@ if __name__ == '__main__':
             fps_history.popleft()
             start_time = time()
     finally:
-        print('Releasing resources...')
+        print("Releasing resources...")
         cap.release()
         cv2.destroyAllWindows()
-        print('Done!')
+        print("Done!")

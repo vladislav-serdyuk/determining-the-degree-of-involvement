@@ -9,9 +9,12 @@ class CaptureReadError(Exception):
     pass
 
 
-def process_video_stream(video_stream: cv2.VideoCapture,
-                         face_analyze_pipeline: FaceAnalysisPipeline | None = None, *,
-                         flip_h: bool = False):
+def process_video_stream(
+    video_stream: cv2.VideoCapture,
+    face_analyze_pipeline: FaceAnalysisPipeline | None = None,
+    *,
+    flip_h: bool = False,
+):
     """
     Обрабатывает видеопоток, находя лица и распознавая эмоции
     :param video_stream: Видео поток
@@ -39,20 +42,20 @@ def process_video_stream(video_stream: cv2.VideoCapture,
             emotions = []
             for metric in analysis_result.metrics:
                 emotion_dict: dict = {
-                    'emotion': metric.emotion,
-                    'confidence': metric.confidence,
+                    "emotion": metric.emotion,
+                    "confidence": metric.confidence,
                 }
                 if metric.ear:
-                    emotion_dict['ear'] = {
-                        'avg_ear': metric.ear.avg_ear,
-                        'eyes_open': not metric.ear.is_blinking,
-                        'blink_count': metric.ear.blink_count
+                    emotion_dict["ear"] = {
+                        "avg_ear": metric.ear.avg_ear,
+                        "eyes_open": not metric.ear.is_blinking,
+                        "blink_count": metric.ear.blink_count,
                     }
                 if metric.head_pose:
-                    emotion_dict['head_pose'] = {
-                        'pitch': metric.head_pose.pitch,
-                        'yaw': metric.head_pose.yaw,
-                        'roll': metric.head_pose.roll,
+                    emotion_dict["head_pose"] = {
+                        "pitch": metric.head_pose.pitch,
+                        "yaw": metric.head_pose.yaw,
+                        "roll": metric.head_pose.roll,
                     }
                 emotions.append(emotion_dict)
             yield analysis_result.image, emotions

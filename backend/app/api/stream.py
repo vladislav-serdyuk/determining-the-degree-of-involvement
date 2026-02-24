@@ -7,40 +7,54 @@ import base64
 import warnings
 from dataclasses import asdict
 from typing import Annotated
-from uuid import uuid4, UUID
+from uuid import UUID, uuid4
 
 import cv2
 import numpy as np
 from cv2 import error
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, status, Query, Path
+from fastapi import APIRouter, Depends, Path, Query, WebSocket, WebSocketDisconnect, status
 
-from app.services.room import RoomService, Client, RoomNotFoundError, ClientNotFoundError, get_room_service
-from app.services.video_processing import get_face_analysis_pipeline_service, FaceAnalysisPipelineService
+from app.services.room import (
+    Client,
+    ClientNotFoundError,
+    RoomNotFoundError,
+    RoomService,
+    get_room_service,
+)
+from app.services.video_processing import (
+    FaceAnalysisPipelineService,
+    get_face_analysis_pipeline_service,
+)
 
 stream_router = APIRouter()
 
 
-@stream_router.websocket('/ws/rooms/{room_id}/stream')
-async def stream(websocket: WebSocket, room_service: Annotated[RoomService, Depends(get_room_service)],
-                 analyzer_service: Annotated[FaceAnalysisPipelineService, Depends(get_face_analysis_pipeline_service)],
-                 room_id: Annotated[str, Path(max_length=40)],
-                 name: Annotated[str | None, Query(max_length=30)] = None):
+@stream_router.websocket("/ws/rooms/{room_id}/stream")
+async def stream(
+    websocket: WebSocket,
+    room_service: Annotated[RoomService, Depends(get_room_service)],
+    analyzer_service: Annotated[
+        FaceAnalysisPipelineService, Depends(get_face_analysis_pipeline_service)
+    ],
+    room_id: Annotated[str, Path(max_length=40)],
+    name: Annotated[str | None, Query(max_length=30)] = None,
+):
     """
     WebSocket эндпоинт для получения видеопотока и анализа эмоций.
-    
+
     Клиент отправляет кадры в формате base64, сервер обрабатывает их и возвращает
     результаты анализа (эмоции, bounding boxes, EAR, HeadPose).
-    
+
     Args:
         websocket: WebSocket соединение
         room_service: Сервис управления комнатами
         analyzer_service: Сервис анализа лиц и эмоций
         room_id: ID комнаты
         name: Имя клиента (опционально)
-    
+
     Returns:
         JSON с обработанным изображением и результатами анализа в формате base64
-    
+
     Raises:
         WebSocketDisconnect: При закрытии соединения клиентом
     """
@@ -59,53 +73,50 @@ async def stream(websocket: WebSocket, room_service: Annotated[RoomService, Depe
                 await websocket.send_json({"error": f"Failed to decode image: {str(e)}"})
                 continue
             if img is None:
-                warnings.warn('Could not decode img /ws/stream')
+                warnings.warn("Could not decode img /ws/stream")
                 continue
             analyze_res = analyzer_service.analyze(client.id_, img)
             new_img = analyze_res.image
             results = analyze_res.metrics
             queue = client.get_frame_queue()
-            frame_data = {
-                'src': img,
-                'prc': new_img,
-                'results': results
-            }
+            frame_data = {"src": img, "prc": new_img, "results": results}
             if queue.full():
                 try:
                     queue.get_nowait()
                 except asyncio.QueueEmpty:
                     pass
             queue.put_nowait(frame_data)
-            _, buffer = cv2.imencode('.jpg', new_img)
-            img_base64 = base64.b64encode(buffer).decode('utf-8')
+            _, buffer = cv2.imencode(".jpg", new_img)
+            img_base64 = base64.b64encode(buffer).decode("utf-8")
             results_serializable = list(map(asdict, results))
-            await websocket.send_json({
-                'image': img_base64,
-                'results': results_serializable
-            })
+            await websocket.send_json({"image": img_base64, "results": results_serializable})
     except WebSocketDisconnect:
         pass
     finally:
         await room_service.remove_client(room_id, client)
 
 
-@stream_router.websocket('/ws/rooms/{room_id}/clients/{client_id}/output_stream')
-async def client_stream(websocket: WebSocket, room_id: Annotated[str, Path(max_length=40)], client_id: UUID,
-                        room_service: Annotated[RoomService, Depends(get_room_service)]):
+@stream_router.websocket("/ws/rooms/{room_id}/clients/{client_id}/output_stream")
+async def client_stream(
+    websocket: WebSocket,
+    room_id: Annotated[str, Path(max_length=40)],
+    client_id: UUID,
+    room_service: Annotated[RoomService, Depends(get_room_service)],
+):
     """
     WebSocket эндпоинт для получения обработанного видеопотока конкретного клиента.
-    
+
     Позволяет получать исходный и обработанный кадры для отображения клиенту.
-    
+
     Args:
         websocket: WebSocket соединение
         room_id: ID комнаты
         client_id: ID клиента-источника видеопотока
         room_service: Сервис управления комнатами
-    
+
     Returns:
         JSON с исходным и обработанным изображением в формате base64
-    
+
     Raises:
         WebSocketDisconnect: При закрытии соединения клиентом
         HTTPException 404: Если комната или клиент не найдены
@@ -124,21 +135,19 @@ async def client_stream(websocket: WebSocket, room_id: Annotated[str, Path(max_l
                 frame_data = await asyncio.wait_for(queue.get(), timeout=0.1)
             except asyncio.TimeoutError:
                 continue
-            img = frame_data['src']
-            new_img = frame_data['prc']
-            results = frame_data['results']
+            img = frame_data["src"]
+            new_img = frame_data["prc"]
+            results = frame_data["results"]
             if img is None or new_img is None:
                 continue
-            _, buffer = cv2.imencode('.jpg', img)
-            img_src_base64 = base64.b64encode(buffer).decode('utf-8')
-            _, buffer = cv2.imencode('.jpg', new_img)
-            img_base64 = base64.b64encode(buffer).decode('utf-8')
+            _, buffer = cv2.imencode(".jpg", img)
+            img_src_base64 = base64.b64encode(buffer).decode("utf-8")
+            _, buffer = cv2.imencode(".jpg", new_img)
+            img_base64 = base64.b64encode(buffer).decode("utf-8")
             results_serializable = list(map(asdict, results))
-            await websocket.send_json({
-                'image_src': img_src_base64,
-                'image': img_base64,
-                'results': results_serializable
-            })
+            await websocket.send_json(
+                {"image_src": img_src_base64, "image": img_base64, "results": results_serializable}
+            )
 
     except WebSocketDisconnect:
         pass
