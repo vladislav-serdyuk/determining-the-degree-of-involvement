@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from time import time
 
 import cv2
-import mediapipe as mp
+import mediapipe as mp  # type: ignore[import-untyped]
 
 from app.core.config import settings
 
