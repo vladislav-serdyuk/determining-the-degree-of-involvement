@@ -1,109 +1,114 @@
 # Emotion Detection Backend
 
-FastAPI-сервер для распознавания эмоций в реальном времени с использованием WebSocket.
+Real-time emotion detection system with FastAPI backend and WebSocket support.
 
-## Возможности
+## Features
 
-- **Детекция лиц** через MediaPipe Face Detection
-- **Распознавание эмоций** через EmotiEffLib (PyTorch)
-- **Анализ EAR** (Eye Aspect Ratio) — детекция моргания и усталости
-- **Оценка позы головы** — определение направления взгляда
-- **WebSocket-стриминг** — обработка видеопотока в реальном времени
-- **Управление комнатами** — изолированные сессии для нескольких клиентов
+| Feature | Description |
+|---------|-------------|
+| **Face Detection** | MediaPipe Face Detection |
+| **Emotion Recognition** | EmotiEffLib (PyTorch) |
+| **EAR Analysis** | Eye Aspect Ratio — blink & fatigue detection |
+| **Head Pose** | Gaze direction estimation |
+| **WebSocket Streaming** | Real-time video processing |
+| **Room Management** | Isolated sessions for multiple clients |
 
-## Требования
+## Requirements
 
 - Python 3.12+
-- CUDA (опционально, для ускорения PyTorch)
+- CUDA (optional, for PyTorch acceleration)
 
-## Установка зависимостей
+## Installation
 
 ```bash
-pip install .
+pip install -r requirements.txt
 ```
 
-## Запуск
+## Running
+
+### Local
 
 ```bash
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-## Docker
-
-### Сборка образа
+### Docker
 
 ```bash
+# Build image
 docker build -t emotion-detection-backend .
-```
 
-### Запуск контейнера
-
-```bash
+# Run with GPU
 docker run -d -p 8000:8000 --gpus all emotion-detection-backend
-```
 
-Для запуска без GPU:
-
-```bash
+# Run without GPU
 docker run -d -p 8000:8000 emotion-detection-backend
 ```
 
-### Docker Compose
+See root `docker-compose.yaml` for full stack deployment.
 
-Смотрите корневой `docker-compose.yaml` для запуска вместе с фронтендом.
+---
 
 ## API Endpoints
 
 ### REST
 
-| Method | Endpoint | Описание |
-|--------|----------|----------|
-| GET | `/health` | Проверка работоспособности |
-| GET | `/rooms` | Список активных комнат |
-| GET | `/rooms/{room_id}/clients` | Клиенты в комнате |
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/health` | Health check |
+| `GET` | `/rooms` | List active rooms |
+| `GET` | `/rooms/{room_id}/clients` | Clients in room |
 
 ### WebSocket
 
-| Endpoint | Описание |
-|----------|----------|
-| `/ws/rooms/{room_id}/stream` | Отправка кадров на анализ |
-| `/ws/rooms/{room_id}/clients/{client_id}/output_stream` | Получение обработанного потока |
+| Endpoint | Description |
+|----------|-------------|
+| `/ws/rooms/{room_id}/stream` | Send frames for analysis |
+| `/ws/rooms/{room_id}/clients/{client_id}/output_stream` | Receive processed stream |
 
-## Конфигурация
+---
 
-Настройки загружаются из переменных окружения или файла `.env`:
+## Configuration
 
-| Параметр | Описание | По умолчанию |
-|----------|----------|--------------|
-| `app_version` | Версия приложения | 1.0.0 |
-| `cors_allowed_origins` | CORS-источники | localhost:8501, localhost:63342 |
-| `face_detection_min_confidence` | Порог детекции лица | 0.5 |
-| `emotion_model_name` | Модель эмоций | enet_b2_8 |
-| `emotion_device` | Устройство (cpu/cuda/auto) | auto |
-| `ear_threshold` | Порог EAR | 0.25 |
-| `head_pitch_attentive` | Порог наклона головы | 20.0 |
+Environment variables (or `.env` file):
 
-## Архитектура
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `app_version` | App version | `1.0.0` |
+| `cors_allowed_origins` | CORS origins | `localhost:8501, localhost:63342` |
+| `face_detection_min_confidence` | Face detection threshold | `0.5` |
+| `emotion_model_name` | Emotion model | `enet_b2_8` |
+| `emotion_device` | Device (cpu/cuda/auto) | `auto` |
+| `ear_threshold` | EAR threshold | `0.25` |
+| `head_pitch_attentive` | Head pitch threshold | `20.0` |
+
+---
+
+## Architecture
 
 ```
-app/
-├── api/              # API маршруты
-│   ├── stream.py     # WebSocket эндпоинты
-│   └── room.py       # REST эндпоинты комнат
-├── core/
-│   └── config.py     # Конфигурация
-├── schemas/          # Pydantic модели
-└── services/
-    ├── room.py              # Управление комнатами
-    └── video_processing/    # Обработка видео
-        ├── face_analysis_pipeline.py
-        ├── face_detection.py
-        ├── analyze_emotion.py
-        ├── analyze_ear.py
-        └── analyze_head_pose.py
+backend/
+├── app/
+│   ├── api/
+│   │   ├── stream.py     # WebSocket endpoints
+│   │   └── room.py      # REST room endpoints
+│   ├── core/
+│   │   └── config.py    # Configuration
+│   ├── schemas/         # Pydantic models
+│   └── services/
+│       ├── room.py              # Room management
+│       └── video_processing/   # Video processing
+│           ├── face_analysis_pipeline.py
+│           ├── face_detection.py
+│           ├── analyze_emotion.py
+│           ├── analyze_ear.py
+│           └── analyze_head_pose.py
+└── tests/
 ```
 
-## Тестирование
+---
+
+## Testing
 
 ```bash
 pytest

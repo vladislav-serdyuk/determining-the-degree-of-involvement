@@ -1,110 +1,114 @@
-# determining-the-degree-of-involvement
+# Emotion Detection System
 
-Real-time emotion detection system with FastAPI backend and Streamlit frontend.
+[![Python 3.12+](https://img.shields.io/badge/Python-3.12+-blue.svg)](https://www.python.org/)
+[![License: XXX](https://img.shields.io/badge/License-XXX-green.svg)](LICENSE)
+[![Docker](https://img.shields.io/badge/Docker-ready-blue.svg)](https://docker.com/)
 
-## Components
-
-- **backend/**: FastAPI backend with WebSocket video streaming support
-- **frontend/**: Streamlit frontend for video upload and webcam processing
+Real-time facial emotion recognition system with attention tracking. Detects emotions, blinks, and head pose to analyze user engagement through webcam or video upload.
 
 ## Quick Start
 
-### Docker Compose
-
-> You need to install nvidia-container-toolkit to support cuda
+### Docker Compose (Recommended)
 
 ```bash
-# Run backend
 docker compose up -d --build
 ```
 
+> Requires `nvidia-container-toolkit` for CUDA support.
+
 ### Manual
 
-#### Install dependencies
+#### 1. Install Dependencies
 
 ```bash
-cd backend && pip install .
+# Backend
+cd backend && pip install -r requirements.txt
+
+# Frontend
 cd ../frontend && pip install -r requirements.txt
 ```
 
-Required `Python 3.12+`:
+#### 2. Run Backend
 
 ```bash
-# create venv with required version
-python -3.12 -m venv venv
+cd backend
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-#### Run backend
-
-> Start uvicorn only from `backend` directory. In another case its modules do not load properly
+#### 3. Run Frontend
 
 ```bash
-# if global uvicorn installed
-cd backend && uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-
-# from venv
-cd backend && python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+cd frontend
+streamlit run emotion_detection_app.py
 ```
 
-### Run frontend (another terminal)
+---
 
-```bash
-cd frontend && streamlit run emotion_detection_app.py
+## Tech Stack
+
+| Component | Technology |
+|-----------|------------|
+| Face Detection | MediaPipe |
+| Emotion Recognition | PyTorch + EmotiEffLib |
+| Video Processing | OpenCV |
+| Backend | FastAPI + WebSocket |
+| Frontend | Streamlit |
+
+---
+
+## Project Structure
+
+```
+.
+├── backend/              # FastAPI backend
+│   ├── app/             # Application code
+│   │   ├── api/         # API routes
+│   │   ├── core/        # Configuration
+│   │   ├── schemas/     # Pydantic models
+│   │   └── services/    # Business logic
+│   └── tests/           # Tests
+├── frontend/            # Streamlit frontend
+│   ├── emotion_detection_app.py
+│   └── styles.css
+└── docker-compose.yaml  # Docker orchestration
 ```
 
-### Tests
+---
+
+## Testing
 
 ```bash
 cd backend
 ./scripts/test.sh
-```
-
-Or:
-
-```bash
-cd backend
+# or
 python -m pytest
 ```
 
-### Linting
+---
+
+## Linting & Formatting
 
 ```bash
 cd backend
+
+# Lint
 ./scripts/lint.sh
-```
+# or
+ruff check . && mypy . --ignore-missing-imports
 
-Or:
-
-```bash
-cd backend
-ruff check .
-mypy . --ignore-missing-imports
-```
-
-### Formatting
-
-```bash
-cd backend
+# Format
 ./scripts/format.sh
-```
-
-Or:
-
-```bash
-cd backend
+# or
 ruff format .
 ```
 
-To test server state just use `http://localhost:8000/health` in your browser and `http://localhost:8000/docs` to check
-generated documentation.
+---
 
-To try API without streamlit app you need to open `../tests/test_ws_stream.html` page with browser
-and click **Connect**, **Start Video** buttons.
+## API Documentation
 
-> The server must be started before.
+- Health: `http://localhost:8000/health`
+- Swagger UI: `http://localhost:8000/docs`
 
-## Tech Stack
+## Testing WebSocket
 
-- MediaPipe (face detection)
-- PyTorch+EmottiEffLib (emotion recognition)
-- OpenCV (video processing)
+Open `tests/html/test_ws_stream.html` in browser, click **Connect** then **Start Video**.
