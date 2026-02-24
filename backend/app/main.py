@@ -12,7 +12,7 @@ from app.core.config import settings
 app = FastAPI(
     title="API распознавания эмоций",
     description="REST API для детекции лиц и распознавания эмоций в реальном времени",
-    version=settings.app_version
+    version=settings.app_version,
 )
 
 app.add_middleware(
@@ -24,18 +24,15 @@ app.add_middleware(
 )
 
 
-@stream_router.get('/health')
+@stream_router.get("/health")
 async def health_check():
     """
     Проверка работоспособности сервиса.
-    
+
     Returns:
         dict: Статус сервиса и версия приложения
     """
-    return {
-        "status": "healthy",
-        "version": settings.app_version
-    }
+    return {"status": "healthy", "version": settings.app_version}
 
 
 app.include_router(stream_router)

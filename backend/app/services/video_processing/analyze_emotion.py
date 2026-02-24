@@ -18,14 +18,13 @@ class EmotionRecognizeResult:
 class EmotionRecognizer:
     """Распознавание с temporal smoothing + confidence thresholding"""
 
-    device = 'cuda' if settings.emotion_device == 'auto' else settings.emotion_device
-    if device == 'cuda' and not torch.cuda.is_available():
-        device = 'cpu'
-    recognizer = EmotiEffLibRecognizer(
-        model_name=settings.emotion_model_name,
-        device=device
+    device = "cuda" if settings.emotion_device == "auto" else settings.emotion_device
+    if device == "cuda" and not torch.cuda.is_available():
+        device = "cpu"
+    recognizer = EmotiEffLibRecognizer(model_name=settings.emotion_model_name, device=device)
+    print(
+        f"EmotiEffLib + Advanced загружен: модель={settings.emotion_model_name}, устройство={device}"
     )
-    print(f"EmotiEffLib + Advanced загружен: модель={settings.emotion_model_name}, устройство={device}")
 
     def __init__(self, *, window_size=None, confidence_threshold=None, ambiguity_threshold=None):
         """
@@ -34,16 +33,34 @@ class EmotionRecognizer:
             confidence_threshold: Минимальный порог уверенности
             ambiguity_threshold: Порог для амбивалентных эмоций
         """
-        actual_window_size = window_size if window_size is not None else settings.emotion_window_size
-        actual_confidence = confidence_threshold if confidence_threshold is not None else settings.emotion_confidence_threshold
-        actual_ambiguity = ambiguity_threshold if ambiguity_threshold is not None else settings.emotion_ambiguity_threshold
+        actual_window_size = (
+            window_size if window_size is not None else settings.emotion_window_size
+        )
+        actual_confidence = (
+            confidence_threshold
+            if confidence_threshold is not None
+            else settings.emotion_confidence_threshold
+        )
+        actual_ambiguity = (
+            ambiguity_threshold
+            if ambiguity_threshold is not None
+            else settings.emotion_ambiguity_threshold
+        )
 
         self._validate_window_size(actual_window_size)
         self._validate_confidence_threshold(actual_confidence)
         self._validate_ambiguity_threshold(actual_ambiguity)
 
-        self.emotion_labels = ['Angry', 'Disgust', 'Fear', 'Happy',
-                               'Sad', 'Surprise', 'Neutral', 'Contempt']
+        self.emotion_labels = [
+            "Angry",
+            "Disgust",
+            "Fear",
+            "Happy",
+            "Sad",
+            "Surprise",
+            "Neutral",
+            "Contempt",
+        ]
 
         # Параметры сглаживания
         self.history: deque[dict[str, float | str]] = deque(maxlen=actual_window_size)
@@ -55,7 +72,9 @@ class EmotionRecognizer:
     @staticmethod
     def _validate_window_size(window_size: int):
         if not isinstance(window_size, int):
-            raise TypeError(f'Type of "window_size" should be int, got {type(window_size).__name__}')
+            raise TypeError(
+                f'Type of "window_size" should be int, got {type(window_size).__name__}'
+            )
         if window_size < 0:
             raise ValueError('"window_size" should be >= 0')
 
@@ -67,7 +86,8 @@ class EmotionRecognizer:
     def _validate_confidence_threshold(confidence_threshold: float):
         if not isinstance(confidence_threshold, (float, int)):
             raise TypeError(
-                f'Type of "confidence_threshold" should be float, got {type(confidence_threshold).__name__}')
+                f'Type of "confidence_threshold" should be float, got {type(confidence_threshold).__name__}'
+            )
         if confidence_threshold < 0 or confidence_threshold > 1:
             raise ValueError('"confidence_threshold" should be in [0;1]')
 
@@ -78,7 +98,9 @@ class EmotionRecognizer:
     @staticmethod
     def _validate_ambiguity_threshold(ambiguity_threshold: float):
         if not isinstance(ambiguity_threshold, (float, int)):
-            raise TypeError(f'Type of "ambiguity_threshold" should be float, got {type(ambiguity_threshold).__name__}')
+            raise TypeError(
+                f'Type of "ambiguity_threshold" should be float, got {type(ambiguity_threshold).__name__}'
+            )
         if ambiguity_threshold < 0 or ambiguity_threshold > 1:
             raise ValueError('"ambiguity_threshold" should be in [0;1]')
 
@@ -89,7 +111,7 @@ class EmotionRecognizer:
     def predict(self, face_crop: cv2.typing.MatLike) -> EmotionRecognizeResult:
         """Предсказывает эмоцию с продвинутой фильтрацией"""
         if face_crop.size == 0:
-            return EmotionRecognizeResult('Neutral', 0.0)  # Fallback к нейтральному
+            return EmotionRecognizeResult("Neutral", 0.0)  # Fallback к нейтральному
 
         try:
             # Получаем предсказание
@@ -99,7 +121,9 @@ class EmotionRecognizer:
             top_emotion = emotion[0]
 
             if scores is not None and len(scores) > 0:
-                confidence = float(max(scores[0])) if hasattr(scores[0], '__iter__') else float(scores[0])
+                confidence = (
+                    float(max(scores[0])) if hasattr(scores[0], "__iter__") else float(scores[0])
+                )
             else:
                 confidence = 1.0
 
@@ -110,10 +134,7 @@ class EmotionRecognizer:
                 confidence = self.confidence_threshold * 0.9
 
             # Добавляем в историю
-            self.history.append({
-                'emotion': top_emotion,
-                'confidence': confidence
-            })
+            self.history.append({"emotion": top_emotion, "confidence": confidence})
 
             # Шаг 2: Temporal smoothing
             if len(self.history) >= 3:
@@ -122,8 +143,8 @@ class EmotionRecognizer:
 
                 for i, hist_item in enumerate(self.history):
                     weight = (i + 1) / len(self.history)
-                    emo = cast(str, hist_item['emotion'])
-                    conf = cast(float, hist_item['confidence'])
+                    emo = cast(str, hist_item["emotion"])
+                    conf = cast(float, hist_item["confidence"])
 
                     if emo not in emotion_votes:
                         emotion_votes[emo] = 0.0
@@ -131,11 +152,7 @@ class EmotionRecognizer:
                     total_weight += weight
 
                 # Сортируем эмоции по весу
-                sorted_emotions = sorted(
-                    emotion_votes.items(),
-                    key=lambda x: x[1],
-                    reverse=True
-                )
+                sorted_emotions = sorted(emotion_votes.items(), key=lambda x: x[1], reverse=True)
 
                 # Шаг 3: Проверка амбивалентности
                 if len(sorted_emotions) >= 2:
@@ -144,7 +161,7 @@ class EmotionRecognizer:
 
                     # Если две топ-эмоции слишком близки -> нейтральное
                     if (top_score - second_score) / total_weight < self.ambiguity_threshold:
-                        return EmotionRecognizeResult('Neutral', 0.5)
+                        return EmotionRecognizeResult("Neutral", 0.5)
 
                     return EmotionRecognizeResult(top_emotion_result, top_score / total_weight)
                 else:
@@ -155,13 +172,13 @@ class EmotionRecognizer:
 
         except (torch.cuda.OutOfMemoryError, MemoryError):
             # Критично - пробрасываем выше для обработки
-            print('Out of memory in EmotionRecognizer.predict()')
+            print("Out of memory in EmotionRecognizer.predict()")
             raise
 
         except (ValueError, RuntimeError, AttributeError) as e:
             # Ожидаемые проблемы обработки - логируем и fallback
             print(f"Предупреждение при распознавании: {e}")
-            return EmotionRecognizeResult('Neutral', 0.0)
+            return EmotionRecognizeResult("Neutral", 0.0)
 
     def reset(self):
         """Сброс истории"""

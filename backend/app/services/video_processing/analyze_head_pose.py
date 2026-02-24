@@ -1,5 +1,5 @@
 """
-Модуль оценки позы головы (Head Pose Estimation) 
+Модуль оценки позы головы (Head Pose Estimation)
 с использованием MediaPipe Face Mesh landmarks (лицевых точек)
 для расчёта метрики вовлечённости
 """
@@ -24,14 +24,17 @@ HEAD_POSE_LANDMARKS = [1, 33, 61, 199, 263, 291]
 
 # 3D-модель лица в мировых координатах      (в произвольных единицах)
 # Эти координаты представляют усреднённую модель человеческого лица
-MODEL_POINTS_3D = np.array([
-    (0.0, 0.0, 0.0),  # Nose tip
-    (225.0, 170.0, 135.0),  # Left eye corner
-    (150.0, -150.0, 125.0),  # Left mouth corner
-    (0.0, -330.0, 65.0),  # Chin
-    (-225.0, 170.0, 135.0),  # Right eye corner
-    (-150.0, -150.0, 125.0),  # Right mouth corner
-], dtype=np.float64)
+MODEL_POINTS_3D = np.array(
+    [
+        (0.0, 0.0, 0.0),  # Nose tip
+        (225.0, 170.0, 135.0),  # Left eye corner
+        (150.0, -150.0, 125.0),  # Left mouth corner
+        (0.0, -330.0, 65.0),  # Chin
+        (-225.0, 170.0, 135.0),  # Right eye corner
+        (-150.0, -150.0, 125.0),  # Right mouth corner
+    ],
+    dtype=np.float64,
+)
 
 
 @dataclass
@@ -68,7 +71,10 @@ class HeadPoseEstimator:
 
         # Формулы для преобразования матрицы поворота в углы Эйлера
         x = math.atan2(rotation_matrix[2, 1], rotation_matrix[2, 2])
-        y = math.atan2(-rotation_matrix[2, 0], math.sqrt(rotation_matrix[0, 0] ** 2 + rotation_matrix[1, 0] ** 2))
+        y = math.atan2(
+            -rotation_matrix[2, 0],
+            math.sqrt(rotation_matrix[0, 0] ** 2 + rotation_matrix[1, 0] ** 2),
+        )
         z = math.atan2(rotation_matrix[1, 0], rotation_matrix[0, 0])
 
         # Конвертация радиан в градусы
@@ -78,7 +84,9 @@ class HeadPoseEstimator:
 
         return pitch, yaw, roll
 
-    def estimate(self, face_landmarks, image_width: int, image_height: int) -> HeadPoseEstimatResult | None:
+    def estimate(
+        self, face_landmarks, image_width: int, image_height: int
+    ) -> HeadPoseEstimatResult | None:
         """
         Оценивает позу головы на основе landmarks точек (для одного лица).
 
@@ -100,31 +108,31 @@ class HeadPoseEstimator:
         """
 
         # Извлечение 2D координат ключевых точек для PnP
-        image_points = np.array([
-            (face_landmarks.landmark[idx].x * image_width,
-             face_landmarks.landmark[idx].y * image_height)
-            for idx in HEAD_POSE_LANDMARKS
-        ], dtype=np.float64)
+        image_points = np.array(
+            [
+                (
+                    face_landmarks.landmark[idx].x * image_width,
+                    face_landmarks.landmark[idx].y * image_height,
+                )
+                for idx in HEAD_POSE_LANDMARKS
+            ],
+            dtype=np.float64,
+        )
 
         # Матрица камеры (упрощ. (быстрая) модель pinhole camera)
         focal_length = image_width  # Приближение: focal length ≈ image width
         center = (image_width / 2, image_height / 2)
-        camera_matrix = np.array([
-            [focal_length, 0, center[0]],
-            [0, focal_length, center[1]],
-            [0, 0, 1]
-        ], dtype=np.float64)
+        camera_matrix = np.array(
+            [[focal_length, 0, center[0]], [0, focal_length, center[1]], [0, 0, 1]],
+            dtype=np.float64,
+        )
 
         # Коэффициенты дисторшена       (предполагаем отсутствие искажений)
         dist_coeffs = np.zeros((4, 1))
 
         # Решение Perspective-n-Point (PnP) задачи
         success, rotation_vec, translation_vec = cv2.solvePnP(
-            MODEL_POINTS_3D,
-            image_points,
-            camera_matrix,
-            dist_coeffs,
-            flags=cv2.SOLVEPNP_ITERATIVE
+            MODEL_POINTS_3D, image_points, camera_matrix, dist_coeffs, flags=cv2.SOLVEPNP_ITERATIVE
         )
 
         # если решение найдено - нужно его обработать
@@ -136,18 +144,21 @@ class HeadPoseEstimator:
             pitch, yaw, roll = self._rotation_matrix_to_angles(rotation_mat)
 
             return HeadPoseEstimatResult(
-                pitch=pitch, yaw=yaw, roll=roll,
+                pitch=pitch,
+                yaw=yaw,
+                roll=roll,
                 rotation_vec=tuple(rotation_vec.flatten().tolist()),  # type: ignore[arg-type]
                 translation_vec=tuple(translation_vec.flatten().tolist()),  # type: ignore[arg-type]
-                attention_state=classify_attention_state(pitch, yaw, roll)
+                attention_state=classify_attention_state(pitch, yaw, roll),
             )
 
         return None
 
 
 # TODO: донастройка параметров и порогов при практическом тесте механизма
-def classify_attention_state(pitch: float, yaw: float, roll: float) -> Literal[
-    "Highly Attentive", "Attentive", "Distracted", "Very Distracted"]:
+def classify_attention_state(
+    pitch: float, yaw: float, roll: float
+) -> Literal["Highly Attentive", "Attentive", "Distracted", "Very Distracted"]:
     """
     Классификация состояния внимания на основе углов головы.
 
@@ -163,7 +174,10 @@ def classify_attention_state(pitch: float, yaw: float, roll: float) -> Literal[
     abs_yaw = abs(yaw)
 
     # Критерии внимания (пороговые значения)
-    if abs_pitch < settings.head_pitch_highly_attentive and abs_yaw < settings.head_yaw_highly_attentive:
+    if (
+        abs_pitch < settings.head_pitch_highly_attentive
+        and abs_yaw < settings.head_yaw_highly_attentive
+    ):
         return "Highly Attentive"  # Прямой взгляд на экран
     elif abs_pitch < settings.head_pitch_attentive and abs_yaw < settings.head_yaw_attentive:
         return "Attentive"  # Небольшое отклонение

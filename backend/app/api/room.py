@@ -6,19 +6,19 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from app.services.room import RoomService, RoomNotFoundError, get_room_service
+from app.services.room import RoomNotFoundError, RoomService, get_room_service
 
 room_router = APIRouter()
 
 
-@room_router.get('/rooms')
+@room_router.get("/rooms")
 async def get_rooms(room_service: Annotated[RoomService, Depends(get_room_service)]):
     """
     Получение списка всех активных комнат.
-    
+
     Args:
         room_service: Сервис управления комнатами
-    
+
     Returns:
         list: Список ID активных комнат
     """
@@ -26,18 +26,20 @@ async def get_rooms(room_service: Annotated[RoomService, Depends(get_room_servic
     return [room.id_ for room in rooms]
 
 
-@room_router.get('/rooms/{room_id}/clients')
-async def get_clients(room_id: str, room_service: Annotated[RoomService, Depends(get_room_service)]):
+@room_router.get("/rooms/{room_id}/clients")
+async def get_clients(
+    room_id: str, room_service: Annotated[RoomService, Depends(get_room_service)]
+):
     """
     Получение списка клиентов в указанной комнате.
-    
+
     Args:
         room_id: ID комнаты
         room_service: Сервис управления комнатами
-    
+
     Returns:
         list: Список кортежей (имя, ID) клиентов
-    
+
     Raises:
         HTTPException 404: Если комната не найдена
     """

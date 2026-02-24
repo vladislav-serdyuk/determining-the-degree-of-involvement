@@ -3,6 +3,7 @@ from dataclasses import dataclass
 import cv2
 
 from app.core.config import settings
+
 from .analyze_ear import EyeAspectRatioAnalyzer, EyeAspectRatioAnalyzeResult
 from .analyze_emotion import EmotionRecognizer
 from .analyze_head_pose import HeadPoseEstimator, HeadPoseEstimatResult
@@ -27,9 +28,14 @@ class FaceAnalizResult:
 class FaceAnalysisPipeline:
     """Пайплайн для комплексного анализа лица (детекция + эмоции + EAR + HeadPose)"""
 
-    def __init__(self, face_detector: FaceDetector, emotion_recognizer: EmotionRecognizer,
-                 ear_analyzer: EyeAspectRatioAnalyzer | None = None,
-                 head_pose_estimator: HeadPoseEstimator | None = None, use_face_mesh: bool = True):
+    def __init__(
+        self,
+        face_detector: FaceDetector,
+        emotion_recognizer: EmotionRecognizer,
+        ear_analyzer: EyeAspectRatioAnalyzer | None = None,
+        head_pose_estimator: HeadPoseEstimator | None = None,
+        use_face_mesh: bool = True,
+    ):
         """
         Args:
             face_detector: Детектор лиц
@@ -57,7 +63,7 @@ class FaceAnalysisPipeline:
                 max_num_faces=settings.face_mesh_max_num_faces,
                 refine_landmarks=True,
                 min_detection_confidence=settings.face_mesh_min_detection_confidence,
-                min_tracking_confidence=settings.face_mesh_min_tracking_confidence
+                min_tracking_confidence=settings.face_mesh_min_tracking_confidence,
             )
 
     def _close_face_mesh(self):
@@ -123,7 +129,11 @@ class FaceAnalysisPipeline:
                 ear = None
 
             # 3. HeadPose анализ (если доступен Face Mesh)
-            if self.head_pose_estimator and face_mesh_results and face_mesh_results.multi_face_landmarks:
+            if (
+                self.head_pose_estimator
+                and face_mesh_results
+                and face_mesh_results.multi_face_landmarks
+            ):
                 if face_idx < len(face_mesh_results.multi_face_landmarks):
                     face_landmarks = face_mesh_results.multi_face_landmarks[face_idx]
                     head_pose_result = self.head_pose_estimator.estimate(face_landmarks, w, h)
@@ -133,8 +143,13 @@ class FaceAnalysisPipeline:
             else:
                 head_pose = None
 
-            result = OneFaceMetricsAnalizResult(emotion=emotion, confidence=conf, bbox=(x1, y1, x2, y2),
-                                                ear=ear, head_pose=head_pose)
+            result = OneFaceMetricsAnalizResult(
+                emotion=emotion,
+                confidence=conf,
+                bbox=(x1, y1, x2, y2),
+                ear=ear,
+                head_pose=head_pose,
+            )
 
             # 4. Визуализация
             self._draw_face_info(vis_image, result)
@@ -153,21 +168,24 @@ class FaceAnalysisPipeline:
 
         # Эмоция
         emotion_text = f"{result.emotion}: {result.confidence:.2f}"
-        cv2.putText(image, emotion_text, (x1, y1 - 10),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 255), 2)
+        cv2.putText(
+            image, emotion_text, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 255), 2
+        )
 
         # EAR (если доступен)
         y_offset = y1 - 30
         if result.ear:
             ear_text = f"EAR: {result.ear.avg_ear:.3f}"
-            cv2.putText(image, ear_text, (x1, y_offset),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 255, 255), 1)
+            cv2.putText(
+                image, ear_text, (x1, y_offset), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 255, 255), 1
+            )
             y_offset -= 15
 
             if result.ear.is_blinking:
                 blink_text = "BLINK"
-                cv2.putText(image, blink_text, (x1, y_offset),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 255), 1)
+                cv2.putText(
+                    image, blink_text, (x1, y_offset), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 255), 1
+                )
                 y_offset -= 15
 
         # HeadPose (если доступен)
@@ -176,8 +194,15 @@ class FaceAnalysisPipeline:
             yaw = result.head_pose.yaw
             roll = result.head_pose.roll
             head_pose_text = f"P:{pitch:.0f} Y:{yaw:.0f} R:{roll:.0f}"
-            cv2.putText(image, head_pose_text, (x1, y_offset),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 0), 1)
+            cv2.putText(
+                image,
+                head_pose_text,
+                (x1, y_offset),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.4,
+                (255, 255, 0),
+                1,
+            )
             y_offset -= 15
 
         # Получение результирующего engagement, если метрика доступна
@@ -190,7 +215,9 @@ class FaceAnalysisPipeline:
 
 
 def make_face_analysis_pipeline() -> FaceAnalysisPipeline:
-    return FaceAnalysisPipeline(face_detector=FaceDetector(),
-                                emotion_recognizer=EmotionRecognizer(),
-                                ear_analyzer=EyeAspectRatioAnalyzer(),
-                                head_pose_estimator=HeadPoseEstimator())
+    return FaceAnalysisPipeline(
+        face_detector=FaceDetector(),
+        emotion_recognizer=EmotionRecognizer(),
+        ear_analyzer=EyeAspectRatioAnalyzer(),
+        head_pose_estimator=HeadPoseEstimator(),
+    )

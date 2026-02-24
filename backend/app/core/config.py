@@ -10,10 +10,10 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     """
     Настройки приложения для распознавания эмоций.
-    
+
     Загружаются из переменных окружения или файла .env.
     Все параметры имеют значения по умолчанию для разработки.
-    
+
     Attributes:
         app_version: Версия приложения
         cors_allowed_origins: Разрешенные источники для CORS
@@ -78,7 +78,7 @@ class Settings(BaseSettings):
     def get_cors_origins(self) -> list[str]:
         """
         Получает список разрешенных источников CORS.
-        
+
         Returns:
             list[str]: Список разрешенных origins
         """
