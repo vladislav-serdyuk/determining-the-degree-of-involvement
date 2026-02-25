@@ -34,11 +34,17 @@ class FaceDetector:
         min_detection_confidence=settings.face_detection_min_confidence,
     )
 
-    def __init__(self, *, margin: int | None = None):
+    def __init__(self, *, min_detection_confidence: float | None = None, margin: int | None = None):
         """
 
         :param margin: Добавочный отступ к bbox, предсказанный моделью
         """
+        if min_detection_confidence is not None:
+            self.detector = mp_face_detection.FaceDetection(
+                model_selection=settings.face_detection_model_selection,
+                min_detection_confidence=min_detection_confidence,
+            )
+
         actual_margin = margin if margin is not None else settings.face_detection_margin
         self._validate_margin(actual_margin)
 
