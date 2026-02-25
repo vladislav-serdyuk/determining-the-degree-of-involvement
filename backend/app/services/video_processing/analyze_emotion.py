@@ -22,7 +22,6 @@ class EmotionRecognizer:
     if device == "cuda" and not torch.cuda.is_available():
         device = "cpu"
     recognizer = EmotiEffLibRecognizer(model_name=settings.emotion_model_name, device=device)
-    print(f"EmotiEffLib + Advanced загружен: модель={settings.emotion_model_name}, устройство={device}")
 
     def __init__(self, *, window_size=None, confidence_threshold=None, ambiguity_threshold=None):
         """

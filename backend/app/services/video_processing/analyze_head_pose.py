@@ -52,7 +52,6 @@ class HeadPoseEstimator:
 
     def __init__(self):
         """Инициализация анализатора позы головы (класса)"""
-        print("HeadPoseEstimator инициализирован")
 
     @staticmethod
     def _rotation_matrix_to_angles(rotation_matrix: np.ndarray) -> tuple[float, float, float]:
@@ -155,7 +154,7 @@ class HeadPoseEstimator:
 
 # TODO: донастройка параметров и порогов при практическом тесте механизма
 def classify_attention_state(
-    pitch: float, yaw: float, roll: float
+        pitch: float, yaw: float, roll: float
 ) -> Literal["Highly Attentive", "Attentive", "Distracted", "Very Distracted"]:
     """
     Классификация состояния внимания на основе углов головы.
