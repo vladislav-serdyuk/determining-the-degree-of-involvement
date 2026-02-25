@@ -1,6 +1,7 @@
+import warnings
 from collections import deque
 from dataclasses import dataclass
-from typing import cast
+from typing import Literal, cast
 
 import cv2
 import torch
@@ -18,12 +19,28 @@ class EmotionRecognizeResult:
 class EmotionRecognizer:
     """Распознавание с temporal smoothing + confidence thresholding"""
 
-    device = "cuda" if settings.emotion_device == "auto" else settings.emotion_device
-    if device == "cuda" and not torch.cuda.is_available():
+    if settings.emotion_device == "auto":
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+    elif settings.emotion_device == "cuda":
+        if torch.cuda.is_available():
+            device = "cuda"
+        else:
+            device = "cpu"
+            warnings.warn('emotion_device is set as "cuda", but cuda is unavailable')
+    else:
         device = "cpu"
+
     recognizer = EmotiEffLibRecognizer(model_name=settings.emotion_model_name, device=device)
 
-    def __init__(self, *, window_size=None, confidence_threshold=None, ambiguity_threshold=None):
+    def __init__(
+        self,
+        *,
+        device: Literal["cpu", "cuda", "auto"] | None = None,
+        model_name: str | None = None,
+        window_size: int | None = None,
+        confidence_threshold: float | None = None,
+        ambiguity_threshold: float | None = None,
+    ):
         """
         Args:
             window_size: Размер окна для сглаживания
@@ -37,6 +54,18 @@ class EmotionRecognizer:
         actual_ambiguity = (
             ambiguity_threshold if ambiguity_threshold is not None else settings.emotion_ambiguity_threshold
         )
+        if device is not None or model_name is not None:
+            if settings.emotion_device == "auto":
+                device = "cuda" if torch.cuda.is_available() else "cpu"
+            elif settings.emotion_device == "cuda":
+                if torch.cuda.is_available():
+                    device = "cuda"
+                else:
+                    device = "cpu"
+                    warnings.warn('device in EmotionRecognizer() is set as "cuda", but cuda is unavailable')
+            else:
+                device = "cpu"
+            self.recognizer = EmotiEffLibRecognizer(model_name=model_name, device=device)
 
         self._validate_window_size(actual_window_size)
         self._validate_confidence_threshold(actual_confidence)

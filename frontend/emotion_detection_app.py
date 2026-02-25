@@ -87,7 +87,7 @@ class EmotionDetectionProcessor:
         try:
             if BACKEND_AVAILABLE:
                 # Детектор лиц
-                face_detector = FaceDetector()
+                face_detector = FaceDetector(min_detection_confidence=params.get('min_detection_confidence', 0.5))
 
                 # Распознаватель эмоций
                 emotion_recognizer = EmotionRecognizer(window_size=params.get('window_size', 15),
@@ -900,7 +900,7 @@ def create_webcam_section():
                 if st.session_state.webcam_detector is None:
                     params = st.session_state.backend_params
 
-                    face_detector = FaceDetector()
+                    face_detector = FaceDetector(min_detection_confidence=params.get('min_detection_confidence', 0.5))
                     emotion_recognizer = EmotionRecognizer(window_size=params['window_size'],
                                                            confidence_threshold=params['confidence_threshold'],
                                                            ambiguity_threshold=params['ambiguity_threshold'])
