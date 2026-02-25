@@ -9,7 +9,7 @@ from cv2.typing import MatLike
 from fastapi import FastAPI, Request, WebSocket
 
 from .face_analysis_pipeline import (
-    FaceAnalizResult,
+    FaceAnalyzeResult,
     FaceAnalysisPipeline,
     make_face_analysis_pipeline,
 )
@@ -26,7 +26,7 @@ class FaceAnalysisPipelineService:
         """Инициализирует сервис."""
         self._analyzers: dict[UUID, FaceAnalysisPipeline] = {}
 
-    async def analyze(self, client_id: UUID, image: MatLike) -> FaceAnalizResult:
+    async def analyze(self, client_id: UUID, image: MatLike) -> FaceAnalyzeResult:
         """
         Анализирует изображение для конкретного клиента.
 
@@ -37,7 +37,7 @@ class FaceAnalysisPipelineService:
             image: Изображение для анализа
 
         Returns:
-            FaceAnalizResult: Результат анализа с обработанным изображением и метриками
+            FaceAnalyzeResult: Результат анализа с обработанным изображением и метриками
         """
         if client_id not in self._analyzers:
             self._analyzers[client_id] = make_face_analysis_pipeline()

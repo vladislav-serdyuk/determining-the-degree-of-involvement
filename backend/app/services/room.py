@@ -10,7 +10,7 @@ from uuid import UUID
 from cv2.typing import MatLike
 from fastapi import FastAPI, Request, WebSocket
 
-from app.services.video_processing.face_analysis_pipeline import OneFaceMetricsAnalizResult
+from app.services.video_processing.face_analysis_pipeline import OneFaceMetricsAnalyzeResult
 
 
 class RoomNotFoundError(Exception):
@@ -43,7 +43,7 @@ class Client:
     name: str | None = None
     src_frame: MatLike | None = None
     prc_frame: MatLike | None = None
-    metrics: list[OneFaceMetricsAnalizResult] | None = None
+    metrics: list[OneFaceMetricsAnalyzeResult] | None = None
     _frame_queue: asyncio.Queue | None = field(default=None, init=False, repr=False)
 
     def get_frame_queue(self) -> asyncio.Queue:

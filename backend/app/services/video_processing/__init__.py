@@ -6,9 +6,9 @@ from .analyze_head_pose import HEAD_POSE_LANDMARKS as HEAD_POSE_LANDMARKS
 from .analyze_head_pose import HeadPoseEstimator as HeadPoseEstimator
 from .analyze_head_pose import HeadPoseEstimatResult as HeadPoseEstimatResult
 from .analyze_head_pose import classify_attention_state as classify_attention_state
-from .face_analysis_pipeline import FaceAnalizResult as FaceAnalizResult
+from .face_analysis_pipeline import FaceAnalyzeResult as FaceAnalizResult
 from .face_analysis_pipeline import FaceAnalysisPipeline as FaceAnalysisPipeline
-from .face_analysis_pipeline import OneFaceMetricsAnalizResult as OneFaceMetricsAnalizResult
+from .face_analysis_pipeline import OneFaceMetricsAnalyzeResult as OneFaceMetricsAnalizResult
 from .face_analysis_pipeline import make_face_analysis_pipeline as make_face_analysis_pipeline
 from .face_detection import FaceDetector as FaceDetector
 from .face_detection import FaceDetectResult as FaceDetectResult
