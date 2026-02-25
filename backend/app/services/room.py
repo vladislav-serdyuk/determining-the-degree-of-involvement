@@ -82,7 +82,6 @@ class RoomService:
 
     def __init__(self):
         """Инициализирует сервис управления комнатами."""
-        print("init")
         self._rooms: dict[str, Room] = {}
         self._lock = asyncio.Lock()
 
