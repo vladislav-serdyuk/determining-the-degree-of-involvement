@@ -172,3 +172,12 @@ class FaceAnalysisPipeline:
             head_pose_text = f"P:{pitch:.0f} Y:{yaw:.0f} R:{roll:.0f}"
             cv2.putText(image, head_pose_text, (x1, y_offset),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 0), 1)
+            y_offset -= 15
+
+        # Получение результирующего engagement, если метрика доступна
+        if result.get('engagement'):
+            score = result['engagement']['score']
+            level = result['engagement']['level']
+            engagement_text = f"Eng: {score:.2f} ({level})"
+            cv2.putText(image, engagement_text, (x1, y_offset),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 200, 100), 1)
