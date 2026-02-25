@@ -22,7 +22,7 @@ docker compose up -d --build
 
 ```bash
 # Backend
-cd backend && pip install -r requirements.txt
+cd backend && pip install -e ".[dev]"
 
 # Frontend
 cd ../frontend && pip install -r requirements.txt
@@ -46,13 +46,13 @@ streamlit run emotion_detection_app.py
 
 ## Tech Stack
 
-| Component | Technology |
-|-----------|------------|
-| Face Detection | MediaPipe |
+| Component           | Technology            |
+|---------------------|-----------------------|
+| Face Detection      | MediaPipe             |
 | Emotion Recognition | PyTorch + EmotiEffLib |
-| Video Processing | OpenCV |
-| Backend | FastAPI + WebSocket |
-| Frontend | Streamlit |
+| Video Processing    | OpenCV                |
+| Backend             | FastAPI + WebSocket   |
+| Frontend            | Streamlit             |
 
 ---
 
