@@ -9,8 +9,8 @@ from cv2.typing import MatLike
 from fastapi import FastAPI, Request, WebSocket
 
 from .face_analysis_pipeline import (
-    FaceAnalyzeResult,
     FaceAnalysisPipeline,
+    FaceAnalyzeResult,
     make_face_analysis_pipeline,
 )
 

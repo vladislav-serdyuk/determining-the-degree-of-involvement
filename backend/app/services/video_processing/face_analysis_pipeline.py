@@ -6,7 +6,7 @@ from app.core.config import settings
 
 from .analyze_ear import EyeAspectRatioAnalyzer, EyeAspectRatioAnalyzeResult
 from .analyze_emotion import EmotionRecognizer
-from .analyze_head_pose import HeadPoseEstimator, HeadPoseEstimatResult
+from .analyze_head_pose import HeadPoseEstimateResult, HeadPoseEstimator
 from .face_detection import FaceDetector, mp_face_mesh
 
 
@@ -16,7 +16,7 @@ class OneFaceMetricsAnalyzeResult:
     confidence: float
     bbox: tuple[int, int, int, int]
     ear: EyeAspectRatioAnalyzeResult | None
-    head_pose: HeadPoseEstimatResult | None
+    head_pose: HeadPoseEstimateResult | None
 
 
 @dataclass
