@@ -83,7 +83,7 @@ class HeadPoseEstimator:
 
         return pitch, yaw, roll
 
-    def estimate(self, face_landmarks, image_width: int, image_height: int) -> HeadPoseEstimatResult | None:
+    def estimate(self, face_landmarks, image_width: int, image_height: int) -> HeadPoseEstimateResult | None:
         """
         Оценивает позу головы на основе landmarks точек (для одного лица).
 
@@ -140,7 +140,7 @@ class HeadPoseEstimator:
             # Извлечение углов Эйлера
             pitch, yaw, roll = self._rotation_matrix_to_angles(rotation_mat)
 
-            return HeadPoseEstimatResult(
+            return HeadPoseEstimateResult(
                 pitch=pitch,
                 yaw=yaw,
                 roll=roll,

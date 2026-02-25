@@ -3,12 +3,12 @@ from .analyze_ear import classify_attention_by_ear as classify_attention_by_ear
 from .analyze_emotion import EmotionRecognizer as EmotionRecognizer
 from .analyze_emotion import EmotionRecognizeResult as EmotionRecognizeResult
 from .analyze_head_pose import HEAD_POSE_LANDMARKS as HEAD_POSE_LANDMARKS
+from .analyze_head_pose import HeadPoseEstimateResult as HeadPoseEstimateResult
 from .analyze_head_pose import HeadPoseEstimator as HeadPoseEstimator
-from .analyze_head_pose import HeadPoseEstimatResult as HeadPoseEstimatResult
 from .analyze_head_pose import classify_attention_state as classify_attention_state
-from .face_analysis_pipeline import FaceAnalyzeResult as FaceAnalizResult
 from .face_analysis_pipeline import FaceAnalysisPipeline as FaceAnalysisPipeline
-from .face_analysis_pipeline import OneFaceMetricsAnalyzeResult as OneFaceMetricsAnalizResult
+from .face_analysis_pipeline import FaceAnalyzeResult as FaceAnalyzeResult
+from .face_analysis_pipeline import OneFaceMetricsAnalyzeResult as OneFaceMetricsAnalyzeResult
 from .face_analysis_pipeline import make_face_analysis_pipeline as make_face_analysis_pipeline
 from .face_detection import FaceDetector as FaceDetector
 from .face_detection import FaceDetectResult as FaceDetectResult
