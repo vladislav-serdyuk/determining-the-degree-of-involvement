@@ -3,7 +3,7 @@
 """
 
 import asyncio
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import cast
 from uuid import UUID
 
@@ -44,7 +44,7 @@ class Client:
     src_frame: MatLike | None = None
     prc_frame: MatLike | None = None
     metrics: list[OneFaceMetricsAnalizResult] | None = None
-    _frame_queue: asyncio.Queue | None = None
+    _frame_queue: asyncio.Queue | None = field(default=None, init=False, repr=False)
 
     def get_frame_queue(self) -> asyncio.Queue:
         """
