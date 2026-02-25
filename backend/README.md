@@ -4,14 +4,14 @@ Real-time emotion detection system with FastAPI backend and WebSocket support.
 
 ## Features
 
-| Feature | Description |
-|---------|-------------|
-| **Face Detection** | MediaPipe Face Detection |
-| **Emotion Recognition** | EmotiEffLib (PyTorch) |
-| **EAR Analysis** | Eye Aspect Ratio — blink & fatigue detection |
-| **Head Pose** | Gaze direction estimation |
-| **WebSocket Streaming** | Real-time video processing |
-| **Room Management** | Isolated sessions for multiple clients |
+| Feature                 | Description                                  |
+|-------------------------|----------------------------------------------|
+| **Face Detection**      | MediaPipe Face Detection                     |
+| **Emotion Recognition** | EmotiEffLib (PyTorch)                        |
+| **EAR Analysis**        | Eye Aspect Ratio — blink & fatigue detection |
+| **Head Pose**           | Gaze direction estimation                    |
+| **WebSocket Streaming** | Real-time video processing                   |
+| **Room Management**     | Isolated sessions for multiple clients       |
 
 ## Requirements
 
@@ -53,17 +53,17 @@ See root `docker-compose.yaml` for full stack deployment.
 
 ### REST
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/health` | Health check |
-| `GET` | `/rooms` | List active rooms |
-| `GET` | `/rooms/{room_id}/clients` | Clients in room |
+| Method | Endpoint                   | Description       |
+|--------|----------------------------|-------------------|
+| `GET`  | `/health`                  | Health check      |
+| `GET`  | `/rooms`                   | List active rooms |
+| `GET`  | `/rooms/{room_id}/clients` | Clients in room   |
 
 ### WebSocket
 
-| Endpoint | Description |
-|----------|-------------|
-| `/ws/rooms/{room_id}/stream` | Send frames for analysis |
+| Endpoint                                                | Description              |
+|---------------------------------------------------------|--------------------------|
+| `/ws/rooms/{room_id}/stream`                            | Send frames for analysis |
 | `/ws/rooms/{room_id}/clients/{client_id}/output_stream` | Receive processed stream |
 
 ---
@@ -72,15 +72,15 @@ See root `docker-compose.yaml` for full stack deployment.
 
 Environment variables (or `.env` file):
 
-| Parameter | Description | Default |
-|-----------|-------------|---------|
-| `app_version` | App version | `1.0.0` |
-| `cors_allowed_origins` | CORS origins | `localhost:8501, localhost:63342` |
-| `face_detection_min_confidence` | Face detection threshold | `0.5` |
-| `emotion_model_name` | Emotion model | `enet_b2_8` |
-| `emotion_device` | Device (cpu/cuda/auto) | `auto` |
-| `ear_threshold` | EAR threshold | `0.25` |
-| `head_pitch_attentive` | Head pitch threshold | `20.0` |
+| Parameter                       | Description              | Default                           |
+|---------------------------------|--------------------------|-----------------------------------|
+| `app_version`                   | App version              | `1.0.0`                           |
+| `cors_allowed_origins`          | CORS origins             | `localhost:8501, localhost:63342` |
+| `face_detection_min_confidence` | Face detection threshold | `0.5`                             |
+| `emotion_model_name`            | Emotion model            | `enet_b2_8`                       |
+| `emotion_device`                | Device (cpu/cuda/auto)   | `auto`                            |
+| `ear_threshold`                 | EAR threshold            | `0.25`                            |
+| `head_pitch_attentive`          | Head pitch threshold     | `20.0`                            |
 
 ---
 
