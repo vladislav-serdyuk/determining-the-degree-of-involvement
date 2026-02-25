@@ -26,7 +26,7 @@ class FaceAnalysisPipelineService:
         """Инициализирует сервис."""
         self._analyzers: dict[UUID, FaceAnalysisPipeline] = {}
 
-    def analyze(self, client_id: UUID, image: MatLike) -> FaceAnalizResult:
+    async def analyze(self, client_id: UUID, image: MatLike) -> FaceAnalizResult:
         """
         Анализирует изображение для конкретного клиента.
 
@@ -42,6 +42,9 @@ class FaceAnalysisPipelineService:
         if client_id not in self._analyzers:
             self._analyzers[client_id] = make_face_analysis_pipeline()
         return self._analyzers[client_id].analyze(image)
+
+    async def remove(self, client_id: UUID):
+        del self._analyzers[client_id]
 
 
 def get_face_analysis_pipeline_service(

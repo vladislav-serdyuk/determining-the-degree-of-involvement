@@ -73,7 +73,7 @@ async def stream(
             if img is None:
                 warnings.warn("Could not decode img /ws/stream")
                 continue
-            analyze_res = analyzer_service.analyze(client.id_, img)
+            analyze_res = await analyzer_service.analyze(client.id_, img)
             new_img = analyze_res.image
             results = analyze_res.metrics
             queue = client.get_frame_queue()
@@ -92,6 +92,7 @@ async def stream(
         pass
     finally:
         await room_service.remove_client(room_id, client)
+        await analyzer_service.remove(client.id_)
 
 
 @stream_router.websocket("/ws/rooms/{room_id}/clients/{client_id}/output_stream")
