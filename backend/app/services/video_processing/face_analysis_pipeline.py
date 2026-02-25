@@ -11,7 +11,7 @@ from .face_detection import FaceDetector, mp_face_mesh
 
 
 @dataclass
-class OneFaceMetricsAnalizResult:
+class OneFaceMetricsAnalyzeResult:
     emotion: str
     confidence: float
     bbox: tuple[int, int, int, int]
@@ -20,9 +20,9 @@ class OneFaceMetricsAnalizResult:
 
 
 @dataclass
-class FaceAnalizResult:
+class FaceAnalyzeResult:
     image: cv2.typing.MatLike
-    metrics: list[OneFaceMetricsAnalizResult]
+    metrics: list[OneFaceMetricsAnalyzeResult]
 
 
 class FaceAnalysisPipeline:
@@ -90,7 +90,7 @@ class FaceAnalysisPipeline:
         elif not self.ear_analyzer:
             self._close_face_mesh()
 
-    def analyze(self, image: cv2.typing.MatLike) -> FaceAnalizResult:
+    def analyze(self, image: cv2.typing.MatLike) -> FaceAnalyzeResult:
         """
         Детектирует лица и распознаёт эмоции (Опционально - EAR и HeadPose)
         :param image: Входное изображение с лицами для анализа
@@ -139,7 +139,7 @@ class FaceAnalysisPipeline:
             else:
                 head_pose = None
 
-            result = OneFaceMetricsAnalizResult(
+            result = OneFaceMetricsAnalyzeResult(
                 emotion=emotion,
                 confidence=conf,
                 bbox=(x1, y1, x2, y2),
@@ -152,10 +152,10 @@ class FaceAnalysisPipeline:
 
             results.append(result)
 
-        return FaceAnalizResult(vis_image, results)
+        return FaceAnalyzeResult(vis_image, results)
 
     @staticmethod
-    def _draw_face_info(image: cv2.typing.MatLike, result: OneFaceMetricsAnalizResult):
+    def _draw_face_info(image: cv2.typing.MatLike, result: OneFaceMetricsAnalyzeResult):
         """Отрисовывает информацию о лице на изображении"""
         x1, y1, x2, y2 = result.bbox
 

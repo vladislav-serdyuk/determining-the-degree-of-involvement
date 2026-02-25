@@ -38,7 +38,7 @@ MODEL_POINTS_3D = np.array(
 
 
 @dataclass
-class HeadPoseEstimatResult:
+class HeadPoseEstimateResult:
     pitch: float
     yaw: float
     roll: float
