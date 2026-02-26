@@ -12,7 +12,6 @@ from app.api.room import room_router
 from app.api.stream import stream_router
 from app.core.config import settings
 
-
 logging.getLogger().handlers.clear()
 logging.basicConfig(
     level=logging.INFO,
@@ -32,6 +31,7 @@ async def lifespan(app: FastAPI):
     logger.info(f"API version: {settings.app_version}")
     yield
     logger.info("Shutting down engagement detection API")
+
 
 app = FastAPI(
     title="API распознавания эмоций",

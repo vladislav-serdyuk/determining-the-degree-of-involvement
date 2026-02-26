@@ -1,5 +1,5 @@
-from dataclasses import dataclass
 import logging
+from dataclasses import dataclass
 
 import cv2
 
@@ -8,6 +8,7 @@ from app.core.config import settings
 from .analyze_ear import EyeAspectRatioAnalyzer, EyeAspectRatioAnalyzeResult
 from .analyze_emotion import EmotionRecognizer
 from .analyze_head_pose import HeadPoseEstimateResult, HeadPoseEstimator
+from .engagement_calculator import EngagementCalculateResult, EngagementCalculator
 from .face_detection import FaceDetector, mp_face_mesh
 
 logger = logging.getLogger(__name__)
@@ -20,6 +21,7 @@ class OneFaceMetricsAnalyzeResult:
     bbox: tuple[int, int, int, int]
     ear: EyeAspectRatioAnalyzeResult | None
     head_pose: HeadPoseEstimateResult | None
+    engagement: EngagementCalculateResult | None
 
 
 @dataclass
@@ -37,6 +39,7 @@ class FaceAnalysisPipeline:
         emotion_recognizer: EmotionRecognizer,
         ear_analyzer: EyeAspectRatioAnalyzer | None = None,
         head_pose_estimator: HeadPoseEstimator | None = None,
+        engagement_calculator: EngagementCalculator | None = None,
         use_face_mesh: bool = True,
     ):
         """
@@ -45,12 +48,14 @@ class FaceAnalysisPipeline:
             emotion_recognizer: Распознаватель эмоций
             ear_analyzer: EyeAspectRatioAnalyzer (опционально)
             head_pose_estimator: HeadPoseEstimator (опционально)
+            engagement_calculator: EngagementCalculator (опционально)
             use_face_mesh: Использовать Face Mesh для EAR/HeadPose (требует больше ресурсов)
         """
         self.face_detector = face_detector
         self.emotion_recognizer = emotion_recognizer
         self.ear_analyzer = ear_analyzer
         self.head_pose_estimator = head_pose_estimator
+        self.engagement_calculator = engagement_calculator
         self.use_face_mesh = use_face_mesh
 
         self.face_mesh = None
@@ -158,12 +163,25 @@ class FaceAnalysisPipeline:
             else:
                 head_pose = None
 
+            engagement = None
+            if self.engagement_calculator:
+                try:
+                    engagement = self.engagement_calculator.calculate(
+                        emotion=emotion,
+                        emotion_confidence=conf,
+                        ear_data=ear,
+                        head_pose_data=head_pose,
+                    )
+                except Exception as e:
+                    logger.error(f"Engagement calculation failed for face {face_idx}: {e}")
+
             result = OneFaceMetricsAnalyzeResult(
                 emotion=emotion,
                 confidence=conf,
                 bbox=(x1, y1, x2, y2),
                 ear=ear,
                 head_pose=head_pose,
+                engagement=engagement,
             )
 
             self._draw_face_info(vis_image, result)
@@ -214,12 +232,11 @@ class FaceAnalysisPipeline:
             y_offset -= 15
 
         # Получение результирующего engagement, если метрика доступна
-        if result.get('engagement'):
-            score = result['engagement']['score']
-            level = result['engagement']['level']
+        if result.engagement:
+            score = result.engagement.score
+            level = result.engagement.level
             engagement_text = f"Eng: {score:.2f} ({level})"
-            cv2.putText(image, engagement_text, (x1, y_offset),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 200, 100), 1)
+            cv2.putText(image, engagement_text, (x1, y_offset), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 200, 100), 1)
 
 
 def make_face_analysis_pipeline() -> FaceAnalysisPipeline:
@@ -228,4 +245,5 @@ def make_face_analysis_pipeline() -> FaceAnalysisPipeline:
         emotion_recognizer=EmotionRecognizer(),
         ear_analyzer=EyeAspectRatioAnalyzer(),
         head_pose_estimator=HeadPoseEstimator(),
+        engagement_calculator=EngagementCalculator(),
     )

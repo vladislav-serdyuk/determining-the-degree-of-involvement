@@ -15,8 +15,6 @@ import numpy as np
 from cv2 import error
 from fastapi import APIRouter, Depends, Path, Query, WebSocket, WebSocketDisconnect, status
 
-from app.services.room import RoomService, Client, RoomNotFoundError, ClientNotFoundError, get_room_service
-from app.services.video_processing import get_face_analysis_pipeline_service, FaceAnalysisPipelineService
 from app.services.room import (
     Client,
     ClientNotFoundError,
@@ -24,10 +22,7 @@ from app.services.room import (
     RoomService,
     get_room_service,
 )
-from app.services.video_processing import (
-    FaceAnalysisPipelineService,
-    get_face_analysis_pipeline_service,
-)
+from app.services.video_processing import FaceAnalysisPipelineService, get_face_analysis_pipeline_service
 
 logger = logging.getLogger(__name__)
 
@@ -61,7 +56,6 @@ async def stream(
     Raises:
         WebSocketDisconnect: При закрытии соединения клиентом
     """
-    engagement_calculator = EngagementCalculator()   # per-session экземпляр
     await websocket.accept()
     client: Client = Client(id_=uuid4(), name=name)
     await room_service.add_client(room_id, client)
@@ -85,21 +79,6 @@ async def stream(
             new_img = analyze_res.image
             results = analyze_res.metrics
 
-            # Обогатить каждое лицо данными по engagement
-            for face_result in results:
-                ear_data = face_result.get('ear')
-                head_pose_data = face_result.get('head_pose')
-                emotion = face_result.get('emotion', 'Neutral')
-                confidence = face_result.get('confidence', 0.5)
-
-                engagement = engagement_calculator.calculate(
-                    emotion=emotion,
-                    emotion_confidence=confidence,
-                    ear_data=ear_data,
-                    head_pose_data=head_pose_data
-                )
-                face_result['engagement'] = engagement
-
             queue = client.get_frame_queue()
             frame_data = {"src": img, "prc": new_img, "results": results}
             if queue.full():
@@ -114,7 +93,6 @@ async def stream(
             await websocket.send_json({"image": img_base64, "results": results_serializable})
     except WebSocketDisconnect:
         logger.info(f"Client {client.id_} disconnected from room {room_id}")
-        engagement_calculator.reset()   # очистка при разрыве
     finally:
         await room_service.remove_client(room_id, client)
         await analyzer_service.remove(client.id_)
