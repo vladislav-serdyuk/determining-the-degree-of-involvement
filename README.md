@@ -1,4 +1,4 @@
-# Emotion Detection System
+# Real-time Engagement Detection System
 
 [![Python 3.12+](https://img.shields.io/badge/Python-3.12+-blue.svg)](https://www.python.org/)
 [![License: XXX](https://img.shields.io/badge/License-XXX-green.svg)](LICENSE)

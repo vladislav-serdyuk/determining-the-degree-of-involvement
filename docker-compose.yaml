@@ -1,5 +1,5 @@
 services:
-  attention-server:
+  engagement-detector:
     build: backend
     image: attention-server:latest
     ports:
