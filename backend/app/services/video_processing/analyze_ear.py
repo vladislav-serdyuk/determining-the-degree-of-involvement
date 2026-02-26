@@ -3,6 +3,7 @@
 для расчёта метрики вовлечённости
 """
 
+import logging
 from collections import deque
 from dataclasses import dataclass
 from typing import Literal
@@ -10,6 +11,8 @@ from typing import Literal
 import numpy as np
 
 from app.core.config import settings
+
+logger = logging.getLogger(__name__)
 
 # Индексы landmarks для правого глаза (6 точек)
 # Порядок: [P1, P2, P3, P4, P5, P6]
@@ -53,7 +56,7 @@ class EyeAspectRatioAnalyzer:
         self.blink_totals: dict[int, int] = {}  # {face_id: total_blinks}
         self.ear_history: dict[int, deque[float]] = {}  # {face_id: deque([ear_values])}
 
-        print(f"EyeAspectRatioAnalyzer инициализирован: threshold={self.ear_threshold}, frames={self.consec_frames}")
+        logger.info(f"EyeAspectRatioAnalyzer initialized: threshold={self.ear_threshold}, frames={self.consec_frames}")
 
     def set_ear_threshold(self, ear_threshold: float):
         """Изменяет порог EAR без сброса счётчиков"""
