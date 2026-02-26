@@ -82,13 +82,13 @@ class EngagementCalculator:
 
     # Веса эмоций для emotion_score (экспертная оценка)
     EMOTION_WEIGHTS = {
-        "Happy": 1.0,  # Позитивная вовлечённость
+        "Happiness": 1.0,  # Позитивная вовлечённость
         "Surprise": 0.8,  # Интерес, удивление (продуктивно)
         "Neutral": 0.6,  # Спокойное внимание
         "Contempt": 0.4,  # Скептицизм (частично вовлечён)
         "Fear": 0.3,  # Беспокойство (низкая вовлечённость)
-        "Sad": 0.2,  # Грусть, усталость
-        "Angry": 0.1,  # Фрустрация
+        "Sadness": 0.2,  # Грусть, усталость
+        "Anger": 0.1,  # Фрустрация
         "Disgust": 0.1,  # Отвращение, отторжение
     }
 
@@ -104,13 +104,13 @@ class EngagementCalculator:
         self.trend_window = trend_window
 
         # История для сглаживания вовлечённости
-        self.engagement_history = deque(maxlen=window_size)
+        self.engagement_history: deque[float] = deque(maxlen=window_size)
 
         # История для определения тренда
-        self.trend_history = deque(maxlen=trend_window)
+        self.trend_history: deque[float] = deque(maxlen=trend_window)
 
         # Время начала сессии (для расчёта частоты моргания)
-        self.session_start_time = None
+        self.session_start_time: datetime | None = None
 
         # Счётчики для статистики
         self.frame_count = 0
@@ -136,7 +136,7 @@ class EngagementCalculator:
             Emotion score (0.0-1.0)
         """
         # Базовый вес эмоции
-        emotion_weight = self.EMOTION_WEIGHTS.get(emotion, 0.5)  # default для unknown
+        emotion_weight = self.EMOTION_WEIGHTS[emotion]  # default для unknown
 
         # Учёт уверенности (confidence): если низкая, то значение снижается
         # меньше 0.55 - штраф
@@ -147,16 +147,14 @@ class EngagementCalculator:
 
         return emotion_weight * confidence * confidence_penalty
 
-    def calculate_eye_score(
-        self, ear_data: EyeAspectRatioAnalyzeResult | None, elapsed_time: Optional[float] = None
-    ) -> float:
+    def calculate_eye_score(self, ear_data: EyeAspectRatioAnalyzeResult, elapsed_time: Optional[float] = None) -> float:
         """
         Вычисление eye_score на основе EAR и частоты моргания.
 
         Использует предвычисленный attention_state из FaceAnalysisPipeline (EAR_STATE_SCORES).
 
         Args:
-            ear_data: Объект EyeAspectRatioAnalyzeResult (может быть None)
+            ear_data: Объект EyeAspectRatioAnalyzeResult
             elapsed_time: Время с начала сессии (секунды) для расчёта blink_rate
 
         Returns:
@@ -166,7 +164,7 @@ class EngagementCalculator:
 
         # Базовый score по attention_state (вычислен в FaceAnalysisPipeline через classify_attention_by_ear)
         attention_state = ear_data.attention_state
-        base_score = self.EAR_STATE_SCORES.get(attention_state, 0.5)
+        base_score = self.EAR_STATE_SCORES[attention_state]
 
         # Модификатор по частоте моргания
         blink_modifier = 1.0
@@ -190,21 +188,21 @@ class EngagementCalculator:
         # Итоговый eye_score (не превышает 1.0)
         return min(1.0, base_score * blink_modifier)
 
-    def calculate_head_pose_score(self, head_pose_data: HeadPoseEstimateResult | None) -> float:
+    def calculate_head_pose_score(self, head_pose_data: HeadPoseEstimateResult) -> float:
         """
         Вычисление head_pose_score на основе позы головы.
 
         Использует предвычисленный attention_state из FaceAnalysisPipeline (HEAD_POSE_STATE_SCORES).
 
         Args:
-            head_pose_data: Объект HeadPoseEstimateResult (может быть None)
+            head_pose_data: Объект HeadPoseEstimateResult
 
         Returns:
             Head pose score (0.0-1.0)
         """
         # Базовый score по attention_state (вычислен в FaceAnalysisPipeline через classify_attention_state)
         attention_state = head_pose_data.attention_state
-        return self.HEAD_POSE_STATE_SCORES.get(attention_state, 0.5)
+        return self.HEAD_POSE_STATE_SCORES[attention_state]
 
     def calculate(
         self,
@@ -225,19 +223,7 @@ class EngagementCalculator:
             timestamp: Временная метка текущего кадра
 
         Returns:
-            Словарь с результатами:
-            {
-                'score': float,              # Сглаженный engagement score (0.0-1.0)
-                'score_raw': float,          # Несглаженный score
-                'level': str,                # 'High', 'Medium', 'Low', 'Very Low'
-                'trend': str,                # 'rising', 'falling', 'stable'
-                'components': {
-                    'emotion_score': float,
-                    'eye_score': float,
-                    'head_pose_score': float
-                },
-                'frame_count': int
-            }
+            EngagementCalculateResult
         """
         # Инициализация времени сессии
         if self.session_start_time is None and timestamp:
