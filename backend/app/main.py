@@ -26,7 +26,7 @@ async def lifespan(app: FastAPI):
     """
     Контекст управления жизненным циклом приложения.
 
-    Выполняет инициализацию при запуске и очистку при завершении.
+    Выполняет инициализацию при запуске, и очистку при завершении.
     """
     logger.info("Starting engagement detection API")
     logger.info(f"API version: {settings.app_version}")
