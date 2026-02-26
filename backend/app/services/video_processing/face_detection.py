@@ -2,6 +2,7 @@
 Модуль детекции лиц
 """
 
+import logging
 from collections import deque
 from dataclasses import dataclass
 from time import time
@@ -10,6 +11,8 @@ import cv2
 import mediapipe as mp  # type: ignore[import-untyped]
 
 from app.core.config import settings
+
+logger = logging.getLogger(__name__)
 
 # Настройка MediaPipe
 mp_face_detection = mp.solutions.face_detection
@@ -125,9 +128,10 @@ class FaceDetector:
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
     from app.services.video_processing.video_stream import process_video_stream
 
-    print("Using camera 0")
+    logger.info("Using camera 0")
     cap = cv2.VideoCapture(0)
     fps_history: deque[float] = deque()
     FPS_HISTORY_LEN = 3  # для более гладкого fps, будет выводится средние из последних FPS_HISTORY_LEN измерений
@@ -154,7 +158,7 @@ if __name__ == "__main__":
             fps_history.popleft()
             start_time = time()
     finally:
-        print("Releasing resources...")
+        logger.info("Releasing resources...")
         cap.release()
         cv2.destroyAllWindows()
-        print("Done!")
+        logger.info("Done!")

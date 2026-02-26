@@ -1,3 +1,4 @@
+import logging
 import warnings
 from collections import deque
 from dataclasses import dataclass
@@ -8,6 +9,8 @@ import torch
 from emotiefflib.facial_analysis import EmotiEffLibRecognizer  # type: ignore[import-untyped]
 
 from app.core.config import settings
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -185,13 +188,11 @@ class EmotionRecognizer:
             return EmotionRecognizeResult(top_emotion, confidence)
 
         except (torch.cuda.OutOfMemoryError, MemoryError):
-            # Критично - пробрасываем выше для обработки
-            print("Out of memory in EmotionRecognizer.predict()")
+            logger.error("Out of memory in EmotionRecognizer.predict()")
             raise
 
         except (ValueError, RuntimeError, AttributeError) as e:
-            # Ожидаемые проблемы обработки - логируем и fallback
-            print(f"Предупреждение при распознавании: {e}")
+            logger.warning(f"Emotion recognition warning: {e}")
             return EmotionRecognizeResult("Neutral", 0.0)
 
     def reset(self):
