@@ -44,7 +44,7 @@ class FaceAnalysisPipelineService:
         return self._analyzers[client_id].analyze(image)
 
     async def remove(self, client_id: UUID):
-        del self._analyzers[client_id]
+        self._analyzers.pop(client_id, None)
 
 
 def get_face_analysis_pipeline_service(

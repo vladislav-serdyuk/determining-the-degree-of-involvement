@@ -16,10 +16,7 @@ dependencies = [
     "fastapi>=0.100",
     "uvicorn[standard]",
     "websockets",
-    "python-multipart",
-    "httpx",
-    "pytest",
-    "pytest-asyncio",
+    "python-multipart"
 ]
 
 [project.optional-dependencies]
