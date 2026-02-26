@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+import logging
 
 import cv2
 
@@ -8,6 +9,8 @@ from .analyze_ear import EyeAspectRatioAnalyzer, EyeAspectRatioAnalyzeResult
 from .analyze_emotion import EmotionRecognizer
 from .analyze_head_pose import HeadPoseEstimateResult, HeadPoseEstimator
 from .face_detection import FaceDetector, mp_face_mesh
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -50,10 +53,10 @@ class FaceAnalysisPipeline:
         self.head_pose_estimator = head_pose_estimator
         self.use_face_mesh = use_face_mesh
 
-        # Инициализируем Face Mesh, если нужен для EAR или HeadPose
         self.face_mesh = None
         if use_face_mesh and (ear_analyzer or head_pose_estimator):
             self._init_face_mesh()
+        logger.debug("FaceAnalysisPipeline initialized")
 
     def _init_face_mesh(self):
         """Инициализирует Face Mesh для EAR/HeadPose анализа"""
@@ -97,43 +100,59 @@ class FaceAnalysisPipeline:
         :return: Возвращает изображение с bbox'ами и список результатов для каждого лица.
         Формат: (image, [{'emotion': str, 'confidence': float, 'ear': dict, 'head_pose': dict}, ...])
         """
-        vis_image = image.copy()  # создание копии для отрисовки на ней bbox'ов
-        faces = self.face_detector.detect(image)
+        vis_image = image.copy()
+        try:
+            faces = self.face_detector.detect(image)
+        except Exception as e:
+            logger.error(f"Face detection failed: {e}")
+            faces = []
 
-        # Запускаем Face Mesh, если нужен
         face_mesh_results = None
         if self.face_mesh:
             rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-            face_mesh_results = self.face_mesh.process(rgb_image)
+            try:
+                face_mesh_results = self.face_mesh.process(rgb_image)
+            except Exception as e:
+                logger.error(f"Face mesh processing failed: {e}")
 
         results = []
         h, w, _ = image.shape
 
         for face_idx, face in enumerate(faces):
-            # 1. Распознавание эмоции
-            prediction = self.emotion_recognizer.predict(face.crop)
-            emotion = prediction.label
-            conf = prediction.confidence
+            try:
+                prediction = self.emotion_recognizer.predict(face.crop)
+                emotion = prediction.label
+                conf = prediction.confidence
+            except Exception as e:
+                logger.error(f"Emotion recognition failed for face {face_idx}: {e}")
+                emotion = "unknown"
+                conf = 0.0
 
             x1, y1, x2, y2 = face.bbox
 
-            # 2. EAR анализ (если доступен Face Mesh)
             if self.ear_analyzer and face_mesh_results and face_mesh_results.multi_face_landmarks:
                 if face_idx < len(face_mesh_results.multi_face_landmarks):
                     face_landmarks = face_mesh_results.multi_face_landmarks[face_idx]
-                    ear_result = self.ear_analyzer.analyze(face_landmarks, w, h, face_idx)
-                    ear = ear_result
+                    try:
+                        ear_result = self.ear_analyzer.analyze(face_landmarks, w, h, face_idx)
+                        ear = ear_result
+                    except Exception as e:
+                        logger.error(f"EAR analysis failed for face {face_idx}: {e}")
+                        ear = None
                 else:
                     ear = None
             else:
                 ear = None
 
-            # 3. HeadPose анализ (если доступен Face Mesh)
             if self.head_pose_estimator and face_mesh_results and face_mesh_results.multi_face_landmarks:
                 if face_idx < len(face_mesh_results.multi_face_landmarks):
                     face_landmarks = face_mesh_results.multi_face_landmarks[face_idx]
-                    head_pose_result = self.head_pose_estimator.estimate(face_landmarks, w, h)
-                    head_pose = head_pose_result
+                    try:
+                        head_pose_result = self.head_pose_estimator.estimate(face_landmarks, w, h)
+                        head_pose = head_pose_result
+                    except Exception as e:
+                        logger.error(f"Head pose estimation failed for face {face_idx}: {e}")
+                        head_pose = None
                 else:
                     head_pose = None
             else:
@@ -147,7 +166,6 @@ class FaceAnalysisPipeline:
                 head_pose=head_pose,
             )
 
-            # 4. Визуализация
             self._draw_face_info(vis_image, result)
 
             results.append(result)

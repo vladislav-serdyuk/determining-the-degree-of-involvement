@@ -2,11 +2,14 @@
 Модуль REST эндпоинтов для управления комнатами.
 """
 
+import logging
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
 
 from app.services.room import RoomNotFoundError, RoomService, get_room_service
+
+logger = logging.getLogger(__name__)
 
 room_router = APIRouter()
 
@@ -23,6 +26,7 @@ async def get_rooms(room_service: Annotated[RoomService, Depends(get_room_servic
         list: Список ID активных комнат
     """
     rooms = await room_service.get_rooms()
+    logger.debug(f"Retrieved {len(rooms)} rooms")
     return [room.id_ for room in rooms]
 
 
@@ -43,6 +47,8 @@ async def get_clients(room_id: str, room_service: Annotated[RoomService, Depends
     """
     try:
         clients = await room_service.get_clients_in_room(room_id)
+        logger.debug(f"Retrieved {len(clients)} clients from room {room_id}")
         return [(item.name, item.id_) for item in clients]
     except RoomNotFoundError:
+        logger.warning(f"Room {room_id} not found")
         raise HTTPException(status_code=404, detail=f"Room {room_id} not found")

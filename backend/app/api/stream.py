@@ -4,6 +4,7 @@
 
 import asyncio
 import base64
+import logging
 import warnings
 from dataclasses import asdict
 from typing import Annotated
@@ -27,6 +28,8 @@ from app.services.video_processing import (
     FaceAnalysisPipelineService,
     get_face_analysis_pipeline_service,
 )
+
+logger = logging.getLogger(__name__)
 
 stream_router = APIRouter()
 
@@ -62,6 +65,7 @@ async def stream(
     await websocket.accept()
     client: Client = Client(id_=uuid4(), name=name)
     await room_service.add_client(room_id, client)
+    logger.info(f"Client {client.id_} connected to room {room_id} (name: {name})")
     try:
         while True:
             data = await websocket.receive_json()
@@ -71,6 +75,7 @@ async def stream(
                 nparr = np.frombuffer(image_bytes, np.uint8)
                 img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
             except (ValueError, TypeError, error) as e:
+                logger.warning(f"Failed to decode image from client {client.id_}: {e}")
                 await websocket.send_json({"error": f"Failed to decode image: {str(e)}"})
                 continue
             if img is None:
@@ -108,6 +113,7 @@ async def stream(
             results_serializable = list(map(asdict, results))
             await websocket.send_json({"image": img_base64, "results": results_serializable})
     except WebSocketDisconnect:
+        logger.info(f"Client {client.id_} disconnected from room {room_id}")
         engagement_calculator.reset()   # очистка при разрыве
     finally:
         await room_service.remove_client(room_id, client)
@@ -140,9 +146,11 @@ async def client_stream(
         HTTPException 404: Если комната или клиент не найдены
     """
     await websocket.accept()
+    logger.info(f"Output stream requested for client {client_id} in room {room_id}")
     try:
         client = await room_service.get_client(room_id, client_id)
     except (RoomNotFoundError, ClientNotFoundError) as e:
+        logger.warning(f"Failed to get client {client_id} in room {room_id}: {e}")
         await websocket.send_json({"error": str(e)})
         await websocket.close(status.WS_1008_POLICY_VIOLATION)
         return
@@ -168,4 +176,4 @@ async def client_stream(
             )
 
     except WebSocketDisconnect:
-        pass
+        logger.info(f"Output stream closed for client {client_id} in room {room_id}")
