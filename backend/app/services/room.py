@@ -3,6 +3,7 @@
 """
 
 import asyncio
+import logging
 from dataclasses import dataclass, field
 from typing import cast
 from uuid import UUID
@@ -11,6 +12,8 @@ from cv2.typing import MatLike
 from fastapi import FastAPI, Request, WebSocket
 
 from app.services.video_processing.face_analysis_pipeline import OneFaceMetricsAnalyzeResult
+
+logger = logging.getLogger(__name__)
 
 
 class RoomNotFoundError(Exception):
@@ -108,7 +111,9 @@ class RoomService:
         async with self._lock:
             if room_id not in self._rooms:
                 self._rooms[room_id] = Room(id_=room_id, clients={})
+                logger.info(f"Room {room_id} created")
             self._rooms[room_id].clients[client.id_] = client
+            logger.debug(f"Client {client.id_} added to room {room_id}")
 
     async def get_client(self, room_id: str, client_id: UUID) -> Client:
         """
@@ -148,8 +153,10 @@ class RoomService:
             if client.id_ not in self._rooms[room_id].clients:
                 return
             del self._rooms[room_id].clients[client.id_]
+            logger.debug(f"Client {client.id_} removed from room {room_id}")
             if len(self._rooms[room_id].clients) == 0:
                 del self._rooms[room_id]
+                logger.info(f"Room {room_id} deleted (empty)")
 
     async def get_clients_in_room(self, room_id: str) -> list[Client]:
         """
