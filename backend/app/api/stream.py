@@ -96,6 +96,7 @@ async def stream(
     finally:
         await room_service.remove_client(room_id, client)
         await analyzer_service.remove(client.id_)
+        client.get_source_closed().set()
 
 
 @stream_router.websocket("/ws/rooms/{room_id}/clients/{client_id}/output_stream")
@@ -134,6 +135,8 @@ async def client_stream(
         return
     try:
         while True:
+            if client.get_source_closed().is_set():
+                return
             queue = client.get_frame_queue()
             try:
                 frame_data = await asyncio.wait_for(queue.get(), timeout=0.1)
