@@ -1,6 +1,6 @@
 # Real-time Engagement Detection Backend
 
-Real-time emotion detection system with FastAPI backend and WebSocket support.
+Real-time engagement detection system with FastAPI backend and WebSocket support.
 
 ## Features
 
@@ -36,13 +36,13 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 ```bash
 # Build image
-docker build -t emotion-detection-backend .
+docker build -t engagement-detection-backend .
 
 # Run with GPU
-docker run -d -p 8000:8000 --gpus all emotion-detection-backend
+docker run -d -p 8000:8000 --gpus all engagement-detection-backend
 
 # Run without GPU
-docker run -d -p 8000:8000 emotion-detection-backend
+docker run -d -p 8000:8000 engagement-detection-backend
 ```
 
 See root `docker-compose.yaml` for full stack deployment.
