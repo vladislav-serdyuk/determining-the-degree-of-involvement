@@ -5,7 +5,6 @@
 import asyncio
 import base64
 import logging
-import warnings
 from dataclasses import asdict
 from typing import Annotated
 from uuid import UUID, uuid4
