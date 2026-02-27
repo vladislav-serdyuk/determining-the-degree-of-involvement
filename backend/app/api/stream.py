@@ -73,7 +73,7 @@ async def stream(
                 await websocket.send_json({"error": f"Failed to decode image: {str(e)}"})
                 continue
             if img is None:
-                warnings.warn("Could not decode img /ws/stream")
+                logger.warning("Could not decode img in /ws/rooms/{room_id}/stream")
                 continue
             analyze_res = await analyzer_service.analyze(client.id_, img)
             new_img = analyze_res.image
