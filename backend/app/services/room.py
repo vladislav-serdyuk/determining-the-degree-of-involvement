@@ -49,7 +49,6 @@ class Client:
     metrics: list[OneFaceMetricsAnalyzeResult] | None = None
     _frame_queue: asyncio.Queue | None = field(default=None, init=False, repr=False)
     _source_closed: asyncio.Event = field(default_factory=asyncio.Event, init=False, repr=False)
-
     def get_frame_queue(self) -> asyncio.Queue:
         """
         Получает очередь кадров для клиента.
