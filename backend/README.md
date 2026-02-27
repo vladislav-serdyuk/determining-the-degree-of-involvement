@@ -1,4 +1,4 @@
-# Emotion Detection Backend
+# Real-time Engagement Detection Backend
 
 Real-time emotion detection system with FastAPI backend and WebSocket support.
 
