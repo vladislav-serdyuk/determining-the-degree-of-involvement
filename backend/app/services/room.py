@@ -48,6 +48,7 @@ class Client:
     prc_frame: MatLike | None = None
     metrics: list[OneFaceMetricsAnalyzeResult] | None = None
     _frame_queue: asyncio.Queue | None = field(default=None, init=False, repr=False)
+    _source_closed: asyncio.Event = field(default=asyncio.Event(), init=False, repr=False)
 
     def get_frame_queue(self) -> asyncio.Queue:
         """
@@ -59,6 +60,15 @@ class Client:
         if self._frame_queue is None:
             self._frame_queue = asyncio.Queue(maxsize=1)
         return self._frame_queue
+
+    def get_source_closed(self) -> asyncio.Event:
+        """
+        Получает событие закрытия клиента
+
+        Returns:
+           asyncio.Event: Событие закрытия клиента
+        """
+        return self._source_closed
 
 
 @dataclass
