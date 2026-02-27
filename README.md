@@ -1,69 +1,119 @@
-# determining-the-degree-of-involvement
+# Real-time Engagement Detection System
 
-Real-time emotion detection system with FastAPI backend and Streamlit frontend.
+[![Python 3.12+](https://img.shields.io/badge/Python-3.12+-blue.svg)](https://www.python.org/)
+[![License: XXX](https://img.shields.io/badge/License-XXX-green.svg)](LICENSE)
+[![Docker](https://img.shields.io/badge/Docker-ready-blue.svg)](https://docker.com/)
 
-## Components
-
-- **server_app/**: FastAPI backend with WebSocket video streaming support
-- **streamlit_app/**: Streamlit frontend for video upload and webcam processing
+Real-time facial emotion recognition system with attention tracking. Detects emotions, blinks, and head pose to analyze user engagement through webcam or video upload.
 
 ## Quick Start
 
-### Docker Compose
+```bash
+git clone https://github.com/FunnyValentain/determining-the-degree-of-involvement.git
+cd determining-the-degree-of-involvement
+```
 
-> You need to install nvidia-container-toolkit to support cuda
+### Docker Compose (Recommended)
 
 ```bash
-# Run backend
-cd server_app
-docker compose up -d --build 
+docker compose up -d --build
 ```
+
+> Requires `nvidia-container-toolkit` for CUDA support.
 
 ### Manual
 
-#### Install dependencies
+#### 1. Install Dependencies
 
 ```bash
-cd server_app && pip install -r requirements.txt
-cd ../streamlit_app && pip install -r requirements.txt
+# Backend
+cd backend && pip install -e ".[dev]"
+
+# Frontend
+cd ../frontend && pip install -r requirements.txt
 ```
 
-Required `Python 3.12+`:
+#### 2. Run Backend
 
 ```bash
-# create venv with required version
-python -3.12 -m venv venv
+cd backend
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-#### Run backend
-
-> Start uvicorn only from `server_app` directory. In another case its modules do not load properly
+#### 3. Run Frontend
 
 ```bash
-# if global uvicorn installed
-cd server_app && uvicorn main:app --reload --host 0.0.0.0 --port 8000
-
-# from venv
-cd server_app && python -m uvicorn main:app --reload --host 0.0.0.0 --port 8000
+cd frontend
+streamlit run emotion_detection_app.py
 ```
 
-### Run frontend (another terminal)
-
-```bash
-cd streamlit_app && streamlit run emotion_detection_app.py
-```
-
-### Tests
-
-To test server state just use `http://localhost:8000/health` in your browser and `http://localhost:8000/docs` to check
-generated documentation.
-
-To try API without streamlit app you need to open `../tests/test_ws_stream.html` page with browser and click **Connect**, **Start Video** buttons.
-
-> The server must be started before.
+---
 
 ## Tech Stack
 
-- MediaPipe (face detection)
-- PyTorch+EmottiEffLib (emotion recognition)
-- OpenCV (video processing)
+| Component           | Technology            |
+|---------------------|-----------------------|
+| Face Detection      | MediaPipe             |
+| Emotion Recognition | PyTorch + EmotiEffLib |
+| Video Processing    | OpenCV                |
+| Backend             | FastAPI + WebSocket   |
+| Frontend            | Streamlit             |
+
+---
+
+## Project Structure
+
+```
+.
+├── backend/              # FastAPI backend
+│   ├── app/             # Application code
+│   │   ├── api/         # API routes
+│   │   ├── core/        # Configuration
+│   │   ├── schemas/     # Pydantic models
+│   │   └── services/    # Business logic
+│   └── tests/           # Tests
+├── frontend/            # Streamlit frontend
+│   ├── emotion_detection_app.py
+│   └── styles.css
+└── docker-compose.yaml  # Docker orchestration
+```
+
+---
+
+## Testing
+
+```bash
+cd backend
+./scripts/test.sh
+# or
+python -m pytest
+```
+
+---
+
+## Linting & Formatting
+
+```bash
+cd backend
+
+# Lint
+./scripts/lint.sh
+# or
+ruff check . && mypy . --ignore-missing-imports
+
+# Format
+./scripts/format.sh
+# or
+ruff format .
+```
+
+---
+
+## API Documentation
+
+- Health: `http://localhost:8000/health`
+- Swagger UI: `http://localhost:8000/docs`
+
+## Testing WebSocket
+
+Open `tests/html/test_ws_stream.html` in browser, click **Connect** then **Start Video**.

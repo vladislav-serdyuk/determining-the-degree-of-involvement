@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <title>Hypervisor Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .container {
+            display: flex;
+            gap: 20px;
+        }
+        .video-container {
+            flex: 1;
+        }
+        .result-container {
+            flex: 1;
+        }
+        canvas {
+            width: 100%;
+            max-width: 480px;
+            border: 2px solid #333;
+            border-radius: 8px;
+        }
+        #status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .connected { background-color: #d4edda; color: #155724; }
+        .disconnected { background-color: #f8d7da; color: #721c24; }
+        .error { background-color: #fff3cd; color: #856404; }
+        #results {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 8px;
+            min-height: 200px;
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .controls {
+            margin: 15px 0;
+        }
+        .slider-group {
+            margin: 10px 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .slider-group label {
+            min-width: 140px;
+        }
+        .slider-group input[type="text"] {
+            flex: 1;
+            padding: 5px;
+        }
+        .fps-display {
+            font-size: 14px;
+            color: #666;
+            margin: 5px 0;
+        }
+        .connection-info {
+            font-size: 14px;
+            color: #666;
+            margin: 5px 0;
+            padding: 10px;
+            background: #e9ecef;
+            border-radius: 4px;
+        }
+        .section {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+        h3 {
+            margin-top: 0;
+        }
+    </style>
+</head>
+<body>
+<h1>Hypervisor Test - Room Management</h1>
+
+<div class="disconnected" id="status">Status: Disconnected</div>
+
+<div class="section">
+    <h3>Server Configuration</h3>
+    <div class="slider-group">
+        <label>Server Address:</label>
+        <input id="serverAddress" type="text" value="http://localhost:8000">
+    </div>
+</div>
+
+<div class="section">
+    <h3>Rooms</h3>
+    <div class="controls">
+        <button id="getRoomsBtn">Get Rooms</button>
+    </div>
+    <div id="roomsList">No rooms...</div>
+</div>
+
+<div class="section">
+    <h3>Clients in Room</h3>
+    <div class="slider-group">
+        <label>Room ID:</label>
+        <input id="roomId" type="text" value="test_room">
+    </div>
+    <div class="controls">
+        <button id="getClientsBtn">Get Clients</button>
+    </div>
+    <div id="clientsList">No clients...</div>
+</div>
+
+<div class="section">
+    <h3>Client Output Stream</h3>
+    <div class="slider-group">
+        <label>Client ID (UUID):</label>
+        <input id="clientId" placeholder="e.g., 12345678-1234-1234-1234-123456789abc" type="text">
+    </div>
+    <div class="controls">
+        <button id="connectWsBtn">Connect to Stream</button>
+        <button disabled id="disconnectWsBtn">Disconnect</button>
+    </div>
+    <div class="connection-info" id="connectionInfo">Connection URL: -</div>
+    <div class="fps-display">
+        <strong>Receive FPS:</strong> <span id="actualReceiveFps">0</span>
+    </div>
+</div>
+
+<div class="container">
+    <div class="video-container">
+        <h3>Original Frame</h3>
+        <canvas id="srcCanvas"></canvas>
+    </div>
+    <div class="result-container">
+        <h3>Processed Frame</h3>
+        <canvas id="resultCanvas"></canvas>
+        <h3>Analysis Results</h3>
+        <div id="results">No results yet...</div>
+    </div>
+</div>
+
+<script>
+    const serverAddress = document.getElementById('serverAddress');
+    const roomIdInput = document.getElementById('roomId');
+    const clientIdInput = document.getElementById('clientId');
+    const status = document.getElementById('status');
+    const roomsList = document.getElementById('roomsList');
+    const clientsList = document.getElementById('clientsList');
+    const results = document.getElementById('results');
+    const connectionInfo = document.getElementById('connectionInfo');
+    const actualReceiveFps = document.getElementById('actualReceiveFps');
+
+    const getRoomsBtn = document.getElementById('getRoomsBtn');
+    const getClientsBtn = document.getElementById('getClientsBtn');
+    const connectWsBtn = document.getElementById('connectWsBtn');
+    const disconnectWsBtn = document.getElementById('disconnectWsBtn');
+
+    const srcCanvas = document.getElementById('srcCanvas');
+    const resultCanvas = document.getElementById('resultCanvas');
+    const srcCtx = srcCanvas.getContext('2d');
+    const resultCtx = resultCanvas.getContext('2d');
+
+    let ws = null;
+    let receiveCount = 0;
+    let lastFpsUpdate = Date.now();
+    let lastFrameTime = 0;
+
+    let srcBitmap = null;
+    let processedBitmap = null;
+    let pendingSrcBase64 = null;
+    let pendingProcessedBase64 = null;
+    let pendingResults = null;
+
+    function base64ToBlob(base64, mimeType = 'image/jpeg') {
+        const binaryString = atob(base64);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+        }
+        return new Blob([bytes], { type: mimeType });
+    }
+
+    function renderLoop() {
+        if (pendingSrcBase64) {
+            const blob = base64ToBlob(pendingSrcBase64);
+            createImageBitmap(blob).then(bitmap => {
+                srcBitmap = bitmap;
+            });
+            pendingSrcBase64 = null;
+        }
+
+        if (pendingProcessedBase64) {
+            const blob = base64ToBlob(pendingProcessedBase64);
+            createImageBitmap(blob).then(bitmap => {
+                processedBitmap = bitmap;
+            });
+            pendingProcessedBase64 = null;
+        }
+
+        if (srcBitmap) {
+            srcCanvas.width = srcBitmap.width;
+            srcCanvas.height = srcBitmap.height;
+            srcCtx.drawImage(srcBitmap, 0, 0);
+            srcBitmap.close();
+            srcBitmap = null;
+        }
+
+        if (processedBitmap) {
+            resultCanvas.width = processedBitmap.width;
+            resultCanvas.height = processedBitmap.height;
+            resultCtx.drawImage(processedBitmap, 0, 0);
+            processedBitmap.close();
+            processedBitmap = null;
+        }
+
+        if (pendingResults) {
+            results.textContent = JSON.stringify(pendingResults, null, 2);
+            pendingResults = null;
+        }
+        requestAnimationFrame(renderLoop);
+    }
+    requestAnimationFrame(renderLoop);
+
+    function getBaseUrl() {
+        let addr = serverAddress.value.trim();
+        if (addr.startsWith('http://')) {
+            addr = addr.substring(7);
+        } else if (addr.startsWith('https://')) {
+            addr = addr.substring(8);
+        }
+        return 'ws://' + addr;
+    }
+
+    function getHttpUrl() {
+        let addr = serverAddress.value.trim();
+        if (!addr.startsWith('http://') && !addr.startsWith('https://')) {
+            addr = 'http://' + addr;
+        }
+        return addr;
+    }
+
+    function updateStatus(message, className) {
+        status.textContent = 'Status: ' + message;
+        status.className = className;
+    }
+
+    function updateFpsDisplay() {
+        const now = Date.now();
+        const elapsed = (now - lastFpsUpdate) / 1000;
+        if (elapsed >= 1) {
+            actualReceiveFps.textContent = Math.round(receiveCount / elapsed);
+            receiveCount = 0;
+            lastFpsUpdate = now;
+        }
+    }
+
+    getRoomsBtn.addEventListener('click', async () => {
+        try {
+            const url = getHttpUrl() + '/rooms';
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            const rooms = await response.json();
+            if (rooms.length === 0) {
+                roomsList.textContent = 'No rooms available';
+            } else {
+                roomsList.textContent = rooms.join('\n');
+            }
+            updateStatus('Rooms loaded', 'connected');
+        } catch (err) {
+            roomsList.textContent = 'Error: ' + err.message;
+            updateStatus('Error: ' + err.message, 'error');
+        }
+    });
+
+    getClientsBtn.addEventListener('click', async () => {
+        try {
+            const roomId = roomIdInput.value.trim();
+            if (!roomId) {
+                throw new Error('Room ID is required');
+            }
+            const url = getHttpUrl() + '/rooms/' + encodeURIComponent(roomId) + '/clients';
+            const response = await fetch(url);
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.detail || `HTTP ${response.status}`);
+            }
+            const clients = await response.json();
+            if (clients.length === 0) {
+                clientsList.textContent = 'No clients in room';
+            } else {
+                const clientText = clients.map(c => `Name: ${c[0]}, ID: ${c[1]}`).join('\n');
+                clientsList.textContent = clientText;
+            }
+            updateStatus('Clients loaded', 'connected');
+        } catch (err) {
+            clientsList.textContent = 'Error: ' + err.message;
+            updateStatus('Error: ' + err.message, 'error');
+        }
+    });
+
+    connectWsBtn.addEventListener('click', () => {
+        const roomId = roomIdInput.value.trim();
+        const clientId = clientIdInput.value.trim();
+
+        if (!roomId) {
+            updateStatus('Error: Room ID is required', 'error');
+            return;
+        }
+        if (!clientId) {
+            updateStatus('Error: Client ID is required', 'error');
+            return;
+        }
+
+        const baseUrl = getBaseUrl();
+        const wsUrl = `${baseUrl}/ws/rooms/${encodeURIComponent(roomId)}/clients/${encodeURIComponent(clientId)}/output_stream`;
+        
+        ws = new WebSocket(wsUrl);
+
+        ws.onopen = () => {
+            updateStatus('Connected', 'connected');
+            connectionInfo.textContent = 'Connection URL: ' + wsUrl;
+            connectWsBtn.disabled = true;
+            disconnectWsBtn.disabled = false;
+        };
+
+        ws.onclose = () => {
+            updateStatus('Disconnected', 'disconnected');
+            connectionInfo.textContent = 'Connection URL: -';
+            connectWsBtn.disabled = false;
+            disconnectWsBtn.disabled = true;
+        };
+
+        ws.onerror = (error) => {
+            updateStatus('Error: ' + error.message, 'error');
+        };
+
+        ws.onmessage = (event) => {
+            receiveCount++;
+            try {
+                const data = JSON.parse(event.data);
+                if (data.error) {
+                    results.textContent = 'Error: ' + data.error;
+                    console.error('Server error:', data.error);
+                } else {
+                    displayFrames(data.image_src, data.image, data.results);
+                }
+            } catch (e) {
+                console.error('Failed to parse message:', e);
+                results.textContent = 'Parse Error: ' + e.message;
+            }
+            updateFpsDisplay();
+        };
+    });
+
+    disconnectWsBtn.addEventListener('click', () => {
+        if (ws) {
+            ws.close();
+        }
+    });
+
+    function displayFrames(srcBase64, processedBase64, analysisResults) {
+<!--        const now = Date.now();-->
+<!--        if (now - lastFrameTime < 50) {-->
+<!--            return;-->
+<!--        }-->
+<!--        lastFrameTime = now;-->
+
+        if (srcBase64) {
+            pendingSrcBase64 = srcBase64;
+        }
+
+        if (processedBase64) {
+            pendingProcessedBase64 = processedBase64;
+        }
+
+        if (analysisResults) {
+            pendingResults = analysisResults;
+        }
+    }
+</script>
+</body>
+</html>

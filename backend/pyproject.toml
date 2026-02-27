@@ -1,0 +1,44 @@
+[project]
+name = "emotion-detection-backend"
+version = "0.1.0"
+description = "Real-time emotion detection backend with FastAPI"
+requires-python = ">=3.12"
+dependencies = [
+    "numpy",
+    "torch",
+    "opencv-python-headless",
+    "torchvision",
+    "mediapipe==0.10.13",
+    "timm==0.9.16",
+    "emotiefflib",
+    "pydantic>=2.0",
+    "pydantic-settings>=2.0",
+    "fastapi>=0.100",
+    "uvicorn[standard]",
+    "websockets",
+    "python-multipart"
+]
+
+[project.optional-dependencies]
+dev = ["httpx", "pytest", "pytest-asyncio"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+ignore = []
+
+[tool.mypy]
+python_version = "3.12"
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true
+no_implicit_optional = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
