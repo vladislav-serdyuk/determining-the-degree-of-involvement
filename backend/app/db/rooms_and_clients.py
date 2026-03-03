@@ -238,18 +238,18 @@ class ClientAndRoomStorage:
                 item["head_pose"]["rotation_vec"] = tuple(item["head_pose"]["rotation_vec"])
                 item["head_pose"]["translation_vec"] = tuple(item["head_pose"]["translation_vec"])
         return ClientFrame(
-            await self._base64_to_img(json["src"]),
-            await self._base64_to_img(json["prc"]),
+            self._base64_to_img(json["src"]),
+            self._base64_to_img(json["prc"]),
             [from_dict(OneFaceMetricsAnalyzeResult, item) for item in json["result"]],
         )
 
     @staticmethod
-    async def _img_to_base64(img: cv2.typing.MatLike) -> str:
+    def _img_to_base64(img: cv2.typing.MatLike) -> str:
         _, buffer = cv2.imencode(".jpg", img)
         return base64.b64encode(buffer).decode("utf-8")
 
     @staticmethod
-    async def _base64_to_img(image_b64: str) -> cv2.typing.MatLike:
+    def _base64_to_img(image_b64: str) -> cv2.typing.MatLike:
         image_bytes = base64.b64decode(image_b64)
         nparr = np.frombuffer(image_bytes, np.uint8)
         img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
