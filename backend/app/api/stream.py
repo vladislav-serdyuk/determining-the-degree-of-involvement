@@ -16,7 +16,7 @@ from fastapi import APIRouter, Depends, Path, Query, WebSocket, WebSocketDisconn
 
 from app.db.rooms_and_clients import Client, ClientNotFoundError, RoomNotFoundError
 from app.services.room import RoomService
-from app.services.video_processing import FaceAnalysisPipelineService, get_face_analysis_pipeline_service
+from app.services.video_processing import FaceAnalysisPipelineService
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +27,7 @@ stream_router = APIRouter()
 async def stream(
     websocket: WebSocket,
     room_service: Annotated[RoomService, Depends()],
-    analyzer_service: Annotated[FaceAnalysisPipelineService, Depends(get_face_analysis_pipeline_service)],
+    analyzer_service: Annotated[FaceAnalysisPipelineService, Depends()],
     room_id: Annotated[str, Path(max_length=40)],
     name: Annotated[str | None, Query(max_length=30)] = None,
 ):
