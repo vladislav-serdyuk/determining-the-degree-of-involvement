@@ -93,8 +93,8 @@ class RoomService:
     async def close_client(self, client: Client) -> None:
         await self.storage.close_client(client)
 
-    async def client_is_close(self, client: Client) -> bool:
-        return await self.storage.client_is_close(client)  # type: ignore[no-any-return]
+    async def client_is_closed(self, client: Client) -> bool:
+        return await self.storage.client_is_closed(client)  # type: ignore[no-any-return]
 
     async def send_frame(self, client: Client, src_b64: str, prc_b64: str, results: list[OneFaceMetricsAnalyzeResult]) -> None:
         await self.storage.send_frame(client, src_b64, prc_b64, results)

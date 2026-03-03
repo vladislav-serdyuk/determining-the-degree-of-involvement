@@ -125,7 +125,7 @@ async def client_stream(
         return
     try:
         while True:
-            if await room_service.client_is_close(client):
+            if await room_service.client_is_closed(client):
                 return
             frame_data = await room_service.get_frame(client)
             if frame_data is None:
