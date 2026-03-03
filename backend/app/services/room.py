@@ -18,9 +18,10 @@ class RoomService:
     а также безопасный доступ к данным через asyncio.Lock.
     """
 
+    storage = ClientAndRoomStorage()
+
     def __init__(self):
         """Инициализирует сервис управления комнатами."""
-        self.storage = ClientAndRoomStorage()
 
     async def get_rooms(self) -> list[Room]:
         """
