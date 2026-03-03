@@ -14,7 +14,7 @@ import numpy as np
 from cv2 import error
 from fastapi import APIRouter, Depends, Path, Query, WebSocket, WebSocketDisconnect, status
 
-from app.db.rooms_and_clients import Client, ClientFrame, ClientNotFoundError, RoomNotFoundError
+from app.db.rooms_and_clients import Client, ClientNotFoundError, RoomNotFoundError
 from app.services.room import RoomService
 from app.services.video_processing import FaceAnalysisPipelineService, get_face_analysis_pipeline_service
 
@@ -75,11 +75,14 @@ async def stream(
             new_img = analyze_res.image
             results = analyze_res.metrics
 
-            await room_service.send_frame(client, ClientFrame(img, new_img, results))
-            _, buffer = cv2.imencode(".jpg", new_img)
-            img_base64 = base64.b64encode(buffer).decode("utf-8")
+            _, src_buffer = cv2.imencode(".jpg", img)
+            _, prc_buffer = cv2.imencode(".jpg", new_img)
+            src_b64 = base64.b64encode(src_buffer).decode("utf-8")
+            prc_b64 = base64.b64encode(prc_buffer).decode("utf-8")
+
+            await room_service.send_frame(client, src_b64, prc_b64, results)
             results_serializable = list(map(asdict, results))
-            await websocket.send_json({"image": img_base64, "results": results_serializable})
+            await websocket.send_json({"image": prc_b64, "results": results_serializable})
     except WebSocketDisconnect:
         logger.info(f"Client {client.id_} disconnected from room {room_id}")
     finally:

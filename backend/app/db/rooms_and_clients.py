@@ -215,11 +215,11 @@ class ClientAndRoomStorage:
             return True
         return res[b"source_closed"] == b"True"
 
-    async def send_frame(self, client: Client, frame: ClientFrame):
+    async def send_frame(self, client: Client, src_b64: str, prc_b64: str, results: list[OneFaceMetricsAnalyzeResult]):
         json = {
-            "src": await self._img_to_base64(frame.src),
-            "prc": await self._img_to_base64(frame.prc),
-            "result": list(map(asdict, frame.results)),
+            "src": src_b64,
+            "prc": prc_b64,
+            "result": list(map(asdict, results)),
         }
         await self.redis.publish(f"client_stream:{client.id_}", JSONEncoder().encode(json))
 
