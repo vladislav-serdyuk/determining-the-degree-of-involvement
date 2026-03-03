@@ -3,11 +3,9 @@
 """
 
 import logging
-from typing import cast
 from uuid import UUID
 
 from cv2.typing import MatLike
-from fastapi import FastAPI, Request, WebSocket
 
 from .face_analysis_pipeline import (
     FaceAnalysisPipeline,

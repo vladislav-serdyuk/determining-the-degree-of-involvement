@@ -124,7 +124,7 @@ class ClientAndRoomStorage:
         logger.debug(f"Found {len(rooms)} rooms")
         return rooms
 
-    async def add_client(self, room_id: str, client: Client) -> None:
+    async def add_client(self, room_id: str, client: Client):
         """
         Добавляет клиента в комнату.
 
@@ -173,7 +173,7 @@ class ClientAndRoomStorage:
         client_data: dict[bytes, bytes] = await self.redis.hgetall(f"client:{client_id_str}")
         return Client(client_id, client_data[b"name"].decode(), client_data[b"source_closed"].decode() == "True")
 
-    async def remove_client(self, room_id: str, client: Client) -> None:
+    async def remove_client(self, room_id: str, client: Client):
         """
         Удаляет клиента из комнаты.
 
@@ -249,7 +249,8 @@ class ClientAndRoomStorage:
         if not res:
             logger.debug(f"Client {client.id_} not found, treating as closed")
             return True
-        is_closed = res[b"source_closed"] == b"True"
+        source_closed = res.get(b"source_closed")
+        is_closed = source_closed == b"True" if source_closed else False
         logger.debug(f"Client {client.id_} is_closed={is_closed}")
         return is_closed
 
@@ -281,7 +282,7 @@ class ClientAndRoomStorage:
             [from_dict(OneFaceMetricsAnalyzeResult, item) for item in data["result"]],
         )
 
-    async def flushdb(self) -> None:
+    async def flushdb(self):
         """Flush all keys from the current database."""
         await self.redis.flushdb()
 

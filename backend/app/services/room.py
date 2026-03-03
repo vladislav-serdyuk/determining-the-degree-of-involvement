@@ -33,7 +33,7 @@ class RoomService:
         """
         return await self.storage.get_rooms()  # type: ignore[no-any-return]
 
-    async def add_client(self, room_id: str, client: Client) -> None:
+    async def add_client(self, room_id: str, client: Client):
         """
         Добавляет клиента в комнату.
 
@@ -62,7 +62,7 @@ class RoomService:
         """
         return await self.storage.get_client(room_id, client_id)  # type: ignore[no-any-return]
 
-    async def remove_client(self, room_id: str, client: Client) -> None:
+    async def remove_client(self, room_id: str, client: Client):
         """
         Удаляет клиента из комнаты.
 
@@ -90,13 +90,13 @@ class RoomService:
         """
         return await self.storage.get_clients_in_room(room_id)  # type: ignore[no-any-return]
 
-    async def close_client(self, client: Client) -> None:
+    async def close_client(self, client: Client):
         await self.storage.close_client(client)
 
     async def client_is_closed(self, client: Client) -> bool:
         return await self.storage.client_is_closed(client)  # type: ignore[no-any-return]
 
-    async def send_frame(self, client: Client, src_b64: str, prc_b64: str, results: list[OneFaceMetricsAnalyzeResult]) -> None:
+    async def send_frame(self, client: Client, src_b64: str, prc_b64: str, results: list[OneFaceMetricsAnalyzeResult]):
         await self.storage.send_frame(client, src_b64, prc_b64, results)
 
     async def get_frame(self, client: Client, timeout: float = 0.0) -> ClientFrame | None:
