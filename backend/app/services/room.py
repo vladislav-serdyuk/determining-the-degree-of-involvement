@@ -71,8 +71,8 @@ class RoomService:
             room_id: ID комнаты
             client: Объект клиента для удаления
         """
-        await self.storage.remove_client(room_id, client)
         await self.close_client(client)
+        await self.storage.remove_client(room_id, client)
 
     async def get_clients_in_room(self, room_id: str) -> list[Client]:
         """

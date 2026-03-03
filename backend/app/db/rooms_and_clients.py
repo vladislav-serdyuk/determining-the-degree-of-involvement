@@ -211,7 +211,7 @@ class ClientAndRoomStorage:
 
     async def client_is_close(self, client: Client):
         res = await self.redis.hgetall(f"client:{client.id_}")
-        if res is None:
+        if not res:
             return True
         return res[b"source_closed"] == b"True"
 
