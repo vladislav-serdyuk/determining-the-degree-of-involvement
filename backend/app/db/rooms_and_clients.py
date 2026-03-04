@@ -96,6 +96,7 @@ class ClientAndRoomStorage:
             db=settings.redis_db,
             password=settings.redis_password if settings.redis_password else None,
             socket_timeout=settings.redis_timeout,
+            decode_responses=True
         )
         self.pubsubs: dict[str, redis.client.PubSub] = {}  # client id : pubsub
         # rooms -> {roomId, ...}
@@ -115,17 +116,15 @@ class ClientAndRoomStorage:
         rooms: list[Room] = []
         room_ids = await self.redis.smembers("rooms")
         for room_id in room_ids:
-            room_id_str = room_id.decode() if isinstance(room_id, bytes) else room_id
-            client_ids = await self.redis.smembers(f"room:{room_id_str}")
+            client_ids = await self.redis.smembers(f"room:{room_id}")
             clients: dict[UUID, Client] = {}
             for client_id in client_ids:
-                client_id_str = client_id.decode() if isinstance(client_id, bytes) else client_id
-                client_uuid = UUID(client_id_str)
-                client_data: dict[bytes, bytes] = await self.redis.hgetall(f"client:{client_id_str}")
+                client_uuid = UUID(client_id)
+                client_data: dict[str, str] = await self.redis.hgetall(f"client:{client_id}")
                 clients[client_uuid] = Client(
-                    client_uuid, client_data[b"name"].decode(), client_data[b"source_closed"].decode() == "True"
+                    client_uuid, client_data["name"], client_data["source_closed"] == "True"
                 )
-            rooms.append(Room(room_id_str, clients))
+            rooms.append(Room(room_id, clients))
         logger.debug(f"Found {len(rooms)} rooms")
         return rooms
 
@@ -164,19 +163,17 @@ class ClientAndRoomStorage:
         """
         logger.debug(f"Getting client {client_id} from room {room_id}")
         room_members = await self.redis.smembers("rooms")
-        room_id_bytes = room_id.encode() if isinstance(room_id, str) else room_id
-        if room_id_bytes not in room_members:
+        if room_id not in room_members:
             logger.warning(f"Room {room_id} not found")
             raise RoomNotFoundError
         client_id_str = str(client_id)
         room_key = f"room:{room_id}"
         room_client_members = await self.redis.smembers(room_key)
-        client_id_bytes = client_id_str.encode() if isinstance(client_id_str, str) else client_id_str
-        if client_id_bytes not in room_client_members:
+        if client_id_str not in room_client_members:
             logger.warning(f"Client {client_id} not found in room {room_id}")
             raise ClientNotFoundError
-        client_data: dict[bytes, bytes] = await self.redis.hgetall(f"client:{client_id_str}")
-        return Client(client_id, client_data[b"name"].decode(), client_data[b"source_closed"].decode() == "True")
+        client_data: dict[str, str] = await self.redis.hgetall(f"client:{client_id_str}")
+        return Client(client_id, client_data["name"], client_data["source_closed"] == "True")
 
     async def remove_client(self, room_id: str, client: Client):
         """
@@ -190,14 +187,12 @@ class ClientAndRoomStorage:
         """
         logger.info(f"Removing client {client.id_} from room {room_id}")
         room_members = await self.redis.smembers("rooms")
-        room_id_bytes = room_id.encode() if isinstance(room_id, str) else room_id
-        if room_id_bytes not in room_members:
+        if room_id not in room_members:
             logger.warning(f"Room {room_id} not found when removing client {client.id_}")
             return
         client_id_str = str(client.id_)
         room_client_members = await self.redis.smembers(f"room:{room_id}")
-        client_id_bytes = client_id_str.encode() if isinstance(client_id_str, str) else client_id_str
-        if client_id_bytes not in room_client_members:
+        if client_id_str not in room_client_members:
             logger.warning(f"Client {client_id_str} not found in room {room_id}")
             return
         await self.redis.delete(f"client:{client_id_str}")
@@ -227,18 +222,16 @@ class ClientAndRoomStorage:
         """
         logger.debug(f"Getting clients in room {room_id}")
         room_members = await self.redis.smembers("rooms")
-        room_id_bytes = room_id.encode() if isinstance(room_id, str) else room_id
-        if room_id_bytes not in room_members:
+        if room_id not in room_members:
             logger.warning(f"Room {room_id} not found")
             raise RoomNotFoundError
         client_ids = await self.redis.smembers(f"room:{room_id}")
         clients: list[Client] = []
         for client_id in client_ids:
-            client_id_str = client_id.decode() if isinstance(client_id, bytes) else client_id
-            client_data: dict[bytes, bytes] = await self.redis.hgetall(f"client:{client_id_str}")
+            client_data: dict[str, str] = await self.redis.hgetall(f"client:{client_id}")
             clients.append(
                 Client(
-                    UUID(client_id_str), client_data[b"name"].decode(), client_data[b"source_closed"].decode() == "True"
+                    UUID(client_id), client_data["name"], client_data["source_closed"] == "True"
                 )
             )
         logger.debug(f"Found {len(clients)} clients in room {room_id}")
@@ -269,8 +262,8 @@ class ClientAndRoomStorage:
         if not res:
             logger.debug(f"Client {client.id_} not found, treating as closed")
             return True
-        source_closed = res.get(b"source_closed")
-        is_closed = source_closed == b"True" if source_closed else False
+        source_closed = res.get("source_closed")
+        is_closed = source_closed == "True" if source_closed else False
         logger.debug(f"Client {client.id_} is_closed={is_closed}")
         return is_closed
 
@@ -313,7 +306,7 @@ class ClientAndRoomStorage:
         message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=timeout)
         if not message or message["type"] != "message":
             return None
-        data = json.loads(message["data"].decode())
+        data = json.loads(message["data"])
         for item in data["result"]:
             _convert_tuples(item)
         logger.debug(f"Frame received for client {client.id_} (results count: {len(data['result'])})")
