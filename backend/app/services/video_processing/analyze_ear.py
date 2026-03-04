@@ -58,12 +58,22 @@ class EyeAspectRatioAnalyzer:
 
         logger.info(f"EyeAspectRatioAnalyzer initialized: threshold={self.ear_threshold}, frames={self.consec_frames}")
 
-    def set_ear_threshold(self, ear_threshold: float):
-        """Изменяет порог EAR без сброса счётчиков"""
+    def set_ear_threshold(self, ear_threshold: float) -> None:
+        """
+        Изменяет порог EAR без сброса счётчиков моргания.
+
+        Args:
+            ear_threshold: Порог EAR для детекции закрытых глаз
+        """
         self.ear_threshold = ear_threshold
 
-    def set_consec_frames(self, consec_frames: int):
-        """Изменяет количество кадров без сброса счётчиков"""
+    def set_consec_frames(self, consec_frames: int) -> None:
+        """
+        Изменяет количество кадров подряд для подтверждения моргания.
+
+        Args:
+            consec_frames: Количество кадров для подтверждения моргания
+        """
         self.consec_frames = consec_frames
 
     @staticmethod

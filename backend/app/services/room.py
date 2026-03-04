@@ -15,8 +15,7 @@ class RoomService:
     """
     Сервис управления комнатами и клиентами.
 
-    Обеспечивает создание, поиск и удаление комнат и клиентов,
-    а также безопасный доступ к данным через asyncio.Lock.
+    Обеспечивает создание, поиск и удаление комнат и клиентов.
     """
 
     storage = ClientAndRoomStorage()
@@ -90,14 +89,50 @@ class RoomService:
         """
         return await self.storage.get_clients_in_room(room_id)  # type: ignore[no-any-return]
 
-    async def close_client(self, client: Client):
+    async def close_client(self, client: Client) -> None:
+        """
+        Закрывает клиентский поток (отмечает как завершённый).
+
+        Args:
+            client: Объект клиента для закрытия
+        """
         await self.storage.close_client(client)
 
     async def client_is_closed(self, client: Client) -> bool:
+        """
+        Проверяет, закрыт ли клиентский поток.
+
+        Args:
+            client: Объект клиента для проверки
+
+        Returns:
+            bool: True если поток закрыт, иначе False
+        """
         return await self.storage.client_is_closed(client)  # type: ignore[no-any-return]
 
-    async def send_frame(self, client: Client, src_b64: str, prc_b64: str, results: list[OneFaceMetricsAnalyzeResult]):
+    async def send_frame(
+        self, client: Client, src_b64: str, prc_b64: str, results: list[OneFaceMetricsAnalyzeResult]
+    ) -> None:
+        """
+        Отправляет кадр клиенту через Pub/Sub.
+
+        Args:
+            client: Объект клиента
+            src_b64: Исходное изображение в base64
+            prc_b64: Обработанное изображение в base64
+            results: Результаты анализа для каждого лица
+        """
         await self.storage.send_frame(client, src_b64, prc_b64, results)
 
     async def get_frame_raw(self, client: Client, timeout: float = 0.0) -> ClientFrameRaw | None:
+        """
+        Получает кадр для клиента из Pub/Sub.
+
+        Args:
+            client: Объект клиента
+            timeout: Таймаут ожидания кадра в секундах
+
+        Returns:
+            ClientFrameRaw с данными кадра или None если кадр недоступен
+        """
         return await self.storage.get_frame_raw(client, timeout)

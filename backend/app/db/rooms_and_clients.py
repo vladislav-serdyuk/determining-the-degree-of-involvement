@@ -246,11 +246,26 @@ class ClientAndRoomStorage:
         logger.debug(f"Found {len(clients)} clients in room {room_id}")
         return clients
 
-    async def close_client(self, client: Client):
+    async def close_client(self, client: Client) -> None:
+        """
+        Закрывает клиентский поток, отмечая его как завершённый в Redis.
+
+        Args:
+            client: Объект клиента для закрытия
+        """
         logger.debug(f"Closing client {client.id_}")
         await self.redis.hset(f"client:{client.id_}", "source_closed", "True")
 
     async def client_is_closed(self, client: Client) -> bool:
+        """
+        Проверяет, закрыт ли клиентский поток.
+
+        Args:
+            client: Объект клиента для проверки
+
+        Returns:
+            bool: True если поток закрыт или клиент не найден, иначе False
+        """
         logger.debug(f"Checking if client {client.id_} is closed")
         res = await self.redis.hgetall(f"client:{client.id_}")
         if not res:
@@ -261,7 +276,18 @@ class ClientAndRoomStorage:
         logger.debug(f"Client {client.id_} is_closed={is_closed}")
         return is_closed
 
-    async def send_frame(self, client: Client, src_b64: str, prc_b64: str, results: list[OneFaceMetricsAnalyzeResult]):
+    async def send_frame(
+        self, client: Client, src_b64: str, prc_b64: str, results: list[OneFaceMetricsAnalyzeResult]
+    ) -> None:
+        """
+        Отправляет кадр клиенту через Redis Pub/Sub.
+
+        Args:
+            client: Объект клиента
+            src_b64: Исходное изображение в base64
+            prc_b64: Обработанное изображение в base64
+            results: Результаты анализа для каждого лица
+        """
         logger.debug(f"Sending frame to client {client.id_} (results count: {len(results)})")
         payload = {
             "src": src_b64,
@@ -271,6 +297,16 @@ class ClientAndRoomStorage:
         await self.redis.publish(f"client_stream:{client.id_}", json.dumps(payload))
 
     async def get_frame_raw(self, client: Client, timeout: float = 0.0) -> ClientFrameRaw | None:
+        """
+        Получает кадр для клиента из Redis Pub/Sub.
+
+        Args:
+            client: Объект клиента
+            timeout: Таймаут ожидания сообщения в секундах
+
+        Returns:
+            ClientFrameRaw с данными кадра или None если сообщение не получено
+        """
         logger.debug(f"Getting frame for client {client.id_} (timeout: {timeout:.2f})")
         if str(client.id_) not in self.pubsubs:
             self.pubsubs[str(client.id_)] = self.redis.pubsub()
@@ -289,6 +325,8 @@ class ClientAndRoomStorage:
             [from_dict(OneFaceMetricsAnalyzeResult, item) for item in data["result"]],
         )
 
-    async def flushdb(self):
-        """Flush all keys from the current database."""
+    async def flushdb(self) -> None:
+        """
+        Очищает все ключи из текущей базы данных Redis.
+        """
         await self.redis.flushdb()
