@@ -21,7 +21,7 @@ def _result_to_dict(result: OneFaceMetricsAnalyzeResult) -> dict:
     return data
 
 
-def _convert_tuples(data: dict) -> None:
+def _convert_tuples(data: dict):
     """Recursively convert lists to tuples for fields that require tuples (bbox, vectors)."""
     if "bbox" in data and isinstance(data["bbox"], list):
         data["bbox"] = tuple(data["bbox"])
@@ -237,7 +237,7 @@ class ClientAndRoomStorage:
         logger.debug(f"Found {len(clients)} clients in room {room_id}")
         return clients
 
-    async def close_client(self, client: Client) -> None:
+    async def close_client(self, client: Client):
         """
         Закрывает клиентский поток, отмечая его как завершённый в Redis.
 
@@ -268,8 +268,7 @@ class ClientAndRoomStorage:
         return is_closed
 
     async def send_frame(
-        self, client: Client, src_b64: str, prc_b64: str, results: list[OneFaceMetricsAnalyzeResult]
-    ) -> None:
+        self, client: Client, src_b64: str, prc_b64: str, results: list[OneFaceMetricsAnalyzeResult]):
         """
         Отправляет кадр клиенту через Redis Pub/Sub.
 
@@ -316,7 +315,7 @@ class ClientAndRoomStorage:
             [from_dict(OneFaceMetricsAnalyzeResult, item) for item in data["result"]],
         )
 
-    async def flushdb(self) -> None:
+    async def remove_tracked_clients_from_db(self):
         """
         Очищает все ключи из текущей базы данных Redis.
         """
