@@ -53,7 +53,7 @@ async def stream(
     await websocket.accept()
     client_id = uuid4()
     client_name = name if name else f"client_{client_id.hex[:8]}"
-    client: Client = Client(id_=client_id, name=client_name)
+    client: Client = Client(id_=client_id, name=client_name, room_id=room_id)
     await room_service.add_client(room_id, client)
     logger.info(f"Client {client.id_} connected to room {room_id} (name: {client_name})")
     try:

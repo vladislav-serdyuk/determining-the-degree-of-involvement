@@ -57,6 +57,7 @@ class Client:
 
     id_: UUID
     name: str
+    room_id: str
     source_closed: bool = False
 
 
@@ -99,6 +100,7 @@ class ClientAndRoomStorage:
             decode_responses=True
         )
         self.pubsubs: dict[str, redis.client.PubSub] = {}  # client id : pubsub
+        self.tracked_clients: set[Client] = set()
         # rooms -> {roomId, ...}
         # room:roomId -> {clientId, ...}
         # client:clientId {name:, source_closed:}
@@ -122,7 +124,7 @@ class ClientAndRoomStorage:
                 client_uuid = UUID(client_id)
                 client_data: dict[str, str] = await self.redis.hgetall(f"client:{client_id}")
                 clients[client_uuid] = Client(
-                    client_uuid, client_data["name"], client_data["source_closed"] == "True"
+                    client_uuid, client_data["name"], room_id, client_data["source_closed"] == "True"
                 )
             rooms.append(Room(room_id, clients))
         logger.debug(f"Found {len(rooms)} rooms")
@@ -144,6 +146,7 @@ class ClientAndRoomStorage:
         await self.redis.hset(
             f"client:{client.id_}", mapping={"name": client.name, "source_closed": str(client.source_closed)}
         )
+        self.tracked_clients.add(client)
         logger.info(f"Client {client.id_} added to room {room_id}")
 
     async def get_client(self, room_id: str, client_id: UUID) -> Client:
@@ -173,7 +176,7 @@ class ClientAndRoomStorage:
             logger.warning(f"Client {client_id} not found in room {room_id}")
             raise ClientNotFoundError
         client_data: dict[str, str] = await self.redis.hgetall(f"client:{client_id_str}")
-        return Client(client_id, client_data["name"], client_data["source_closed"] == "True")
+        return Client(client_id, client_data["name"], room_id, client_data["source_closed"] == "True")
 
     async def remove_client(self, room_id: str, client: Client):
         """
@@ -205,6 +208,7 @@ class ClientAndRoomStorage:
             await self.redis.srem("rooms", room_id)
             await self.redis.delete(f"room:{room_id}")
             logger.info(f"Room {room_id} deleted (no more clients)")
+        self.tracked_clients.discard(client)
         logger.info(f"Client {client.id_} removed from room {room_id}")
 
     async def get_clients_in_room(self, room_id: str) -> list[Client]:
@@ -231,7 +235,7 @@ class ClientAndRoomStorage:
             client_data: dict[str, str] = await self.redis.hgetall(f"client:{client_id}")
             clients.append(
                 Client(
-                    UUID(client_id), client_data["name"], client_data["source_closed"] == "True"
+                    UUID(client_id), client_data["name"], room_id, client_data["source_closed"] == "True"
                 )
             )
         logger.debug(f"Found {len(clients)} clients in room {room_id}")
@@ -317,6 +321,7 @@ class ClientAndRoomStorage:
 
     async def remove_tracked_clients_from_db(self):
         """
-        Очищает все ключи из текущей базы данных Redis.
+        Удалить всех клиентов созданых воркером
         """
-        await self.redis.flushdb()
+        for client in self.tracked_clients:
+            await self.remove_client(client.room_id, client)

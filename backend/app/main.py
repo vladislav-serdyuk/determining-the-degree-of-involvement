@@ -32,7 +32,7 @@ async def lifespan(app: FastAPI):
     logger.info(f"API version: {settings.app_version}")
     yield
     logger.info("Shutting down engagement detection API")
-    await RoomService.storage.flushdb()
+    await RoomService.storage.remove_tracked_clients_from_db()
 
 
 app = FastAPI(
