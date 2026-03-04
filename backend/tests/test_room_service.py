@@ -19,8 +19,8 @@ class TestRoomService:
     @pytest.mark.asyncio
     async def test_add_multiple_clients_to_same_room(self, room_service):
         room_id = "test_room"
-        client1 = Client(id_=uuid4(), name="client1")
-        client2 = Client(id_=uuid4(), name="client2")
+        client1 = Client(id_=uuid4(), name="client1", room_id=room_id)
+        client2 = Client(id_=uuid4(), name="client2", room_id=room_id)
 
         await room_service.add_client(room_id, client1)
         await room_service.add_client(room_id, client2)
@@ -33,8 +33,8 @@ class TestRoomService:
     async def test_add_clients_to_different_rooms(self, room_service):
         room1 = "room1"
         room2 = "room2"
-        client1 = Client(id_=uuid4(), name="client1")
-        client2 = Client(id_=uuid4(), name="client2")
+        client1 = Client(id_=uuid4(), name="client1", room_id=room1)
+        client2 = Client(id_=uuid4(), name="client2", room_id=room2)
 
         await room_service.add_client(room1, client1)
         await room_service.add_client(room2, client2)
@@ -45,8 +45,8 @@ class TestRoomService:
     @pytest.mark.asyncio
     async def test_get_clients_in_room(self, room_service):
         room_id = "test_room"
-        client1 = Client(id_=uuid4(), name="client1")
-        client2 = Client(id_=uuid4(), name="client2")
+        client1 = Client(id_=uuid4(), name="client1", room_id=room_id)
+        client2 = Client(id_=uuid4(), name="client2", room_id=room_id)
 
         await room_service.add_client(room_id, client1)
         await room_service.add_client(room_id, client2)
@@ -76,7 +76,7 @@ class TestRoomService:
     @pytest.mark.asyncio
     async def test_get_client_nonexistent_client_raises_error(self, room_service):
         room_id = "test_room"
-        await room_service.add_client(room_id, Client(id_=uuid4(), name="existing"))
+        await room_service.add_client(room_id, Client(id_=uuid4(), name="existing", room_id=room_id))
 
         with pytest.raises(ClientNotFoundError):
             await room_service.get_client(room_id, uuid4())
@@ -98,8 +98,8 @@ class TestRoomService:
     @pytest.mark.asyncio
     async def test_remove_client_updates_room_state(self, room_service):
         room_id = "test_room"
-        client1 = Client(id_=uuid4(), name="client1")
-        client2 = Client(id_=uuid4(), name="client2")
+        client1 = Client(id_=uuid4(), name="client1", room_id=room_id)
+        client2 = Client(id_=uuid4(), name="client2", room_id=room_id)
 
         await room_service.add_client(room_id, client1)
         await room_service.add_client(room_id, client2)
@@ -113,7 +113,7 @@ class TestRoomService:
     @pytest.mark.asyncio
     async def test_room_deleted_when_last_client_removed(self, room_service):
         room_id = "test_room"
-        client = Client(id_=uuid4(), name="client")
+        client = Client(id_=uuid4(), name="client", room_id=room_id)
         await room_service.add_client(room_id, client)
 
         await room_service.remove_client(room_id, client)

@@ -45,7 +45,7 @@ class ClientNotFoundError(Exception):
     pass
 
 
-@dataclass
+@dataclass(eq=False)
 class Client:
     """
     Представляет клиента в комнате для видеопотока.

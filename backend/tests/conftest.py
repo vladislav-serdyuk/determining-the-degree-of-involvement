@@ -10,43 +10,36 @@ class MockRedis:
 
     async def smembers(self, key):
         result = self._sets.get(key, set())
-        return {k.encode() if isinstance(k, str) else k for k in result}
+        return result
 
     async def sadd(self, key, *values):
         if key not in self._sets:
             self._sets[key] = set()
-        self._sets[key].update(values)
+        str_values = {str(v) for v in values}
+        self._sets[key].update(str_values)
         return len(values)
 
     async def srem(self, key, *values):
         if key in self._sets:
-            self._sets[key].difference_update(values)
+            str_values = {str(v) for v in values}
+            self._sets[key].difference_update(str_values)
             return len(values)
         return 0
-
-    @staticmethod
-    def _encode_key(key):
-        return key.encode() if isinstance(key, str) else key
-
-    @staticmethod
-    def _encode_value(value):
-        return value.encode() if isinstance(value, str) else value
 
     async def hset(self, key, field=None, value=None, mapping=None):
         if key not in self._data:
             self._data[key] = {}
         if field is not None and value is not None:
-            self._data[key][self._encode_key(field)] = self._encode_value(value)
+            self._data[key][str(field)] = str(value)
         if mapping:
-            self._data[key].update({self._encode_key(k): self._encode_value(v) for k, v in mapping.items()})
+            self._data[key].update({str(k): str(v) for k, v in mapping.items()})
         return 1
 
     async def hgetall(self, key):
-        raw = self._data.get(key, {})
-        return {self._encode_key(k): self._encode_value(v) for k, v in raw.items()}
+        return self._data.get(key, {})
 
     async def hget(self, key, field):
-        return self._data.get(key, {}).get(field)
+        return self._data.get(key, {}).get(str(field))
 
     async def delete(self, *keys):
         count = 0
@@ -101,6 +94,6 @@ def room_service(mock_redis, monkeypatch):
 
 @pytest.fixture
 def client():
-    from app.services.room import Client
+    from app.db.rooms_and_clients import Client
 
-    return Client(id_=uuid4(), name="test_client")
+    return Client(id_=uuid4(), name="test_client", room_id="test_room")

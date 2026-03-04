@@ -85,7 +85,7 @@ async def test_get_clients_in_room_success():
     from app.services.room import RoomService
 
     mock_service = MagicMock(spec=RoomService)
-    test_client = RoomClient(id_=uuid4(), name="test_client")
+    test_client = RoomClient(id_=uuid4(), name="test_client", room_id="test_room")
     mock_service.get_clients_in_room = AsyncMock(return_value=[test_client])
 
     def override_get_room_service():
