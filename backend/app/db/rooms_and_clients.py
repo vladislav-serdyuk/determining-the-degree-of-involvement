@@ -270,25 +270,6 @@ class ClientAndRoomStorage:
         }
         await self.redis.publish(f"client_stream:{client.id_}", json.dumps(payload))
 
-    async def get_frame(self, client: Client, timeout: float = 0.0) -> ClientFrame | None:
-        logger.debug(f"Getting frame for client {client.id_} (timeout: {timeout:.2f})")
-        if str(client.id_) not in self.pubsubs:
-            self.pubsubs[str(client.id_)] = self.redis.pubsub()
-            await self.pubsubs[str(client.id_)].subscribe(f"client_stream:{client.id_}")
-        pubsub = self.pubsubs[str(client.id_)]
-        message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=timeout)
-        if not message or message["type"] != "message":
-            return None
-        data = json.loads(message["data"].decode())
-        for item in data["result"]:
-            _convert_tuples(item)
-        logger.debug(f"Frame received for client {client.id_} (results count: {len(data['result'])})")
-        return ClientFrame(
-            self._base64_to_img(data["src"]),
-            self._base64_to_img(data["prc"]),
-            [from_dict(OneFaceMetricsAnalyzeResult, item) for item in data["result"]],
-        )
-
     async def get_frame_raw(self, client: Client, timeout: float = 0.0) -> ClientFrameRaw | None:
         logger.debug(f"Getting frame for client {client.id_} (timeout: {timeout:.2f})")
         if str(client.id_) not in self.pubsubs:
@@ -311,18 +292,3 @@ class ClientAndRoomStorage:
     async def flushdb(self):
         """Flush all keys from the current database."""
         await self.redis.flushdb()
-
-    @staticmethod
-    def _img_to_base64(img: cv2.typing.MatLike) -> str:
-        _, buffer = cv2.imencode(".jpg", img)
-        return base64.b64encode(buffer).decode("utf-8")
-
-    @staticmethod
-    def _base64_to_img(image_b64: str) -> cv2.typing.MatLike:
-        image_bytes = base64.b64decode(image_b64)
-        nparr = np.frombuffer(image_bytes, np.uint8)
-        img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-        if img is None:
-            msg = "Failed to decode image"
-            raise ValueError(msg)
-        return img

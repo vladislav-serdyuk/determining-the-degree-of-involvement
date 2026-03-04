@@ -99,8 +99,5 @@ class RoomService:
     async def send_frame(self, client: Client, src_b64: str, prc_b64: str, results: list[OneFaceMetricsAnalyzeResult]):
         await self.storage.send_frame(client, src_b64, prc_b64, results)
 
-    async def get_frame(self, client: Client, timeout: float = 0.0) -> ClientFrame | None:
-        return await self.storage.get_frame(client, timeout)  # type: ignore[no-any-return]
-
     async def get_frame_raw(self, client: Client, timeout: float = 0.0) -> ClientFrameRaw | None:
         return await self.storage.get_frame_raw(client, timeout)
