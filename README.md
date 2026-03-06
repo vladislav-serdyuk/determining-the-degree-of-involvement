@@ -16,8 +16,7 @@ cd determining-the-degree-of-involvement
 ### Docker Compose (Recommended)
 
 ```bash
-docker compose build
-docker compose up -d
+docker compose up -d --build
 ```
 
 > Requires `nvidia-container-toolkit` for CUDA support.
@@ -51,7 +50,7 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 ```bash
 cd frontend
-streamlit run src/main.py
+streamlit run emotion_detection_app.py
 ```
 
 ---
@@ -79,35 +78,17 @@ streamlit run src/main.py
 ├── backend/                 # FastAPI backend
 │   ├── app/                # Application code
 │   │   ├── api/           # API routes
-│   │   │   ├── room.py
-│   │   │   └── stream.py
 │   │   ├── core/          # Configuration
-│   │   │   └── config.py
 │   │   ├── db/            # Database
-│   │   │   └── rooms_and_clients.py
 │   │   ├── schemas/       # Pydantic models
-│   │   ├── services/      # Business logic
-│   │   │   ├── room.py
-│   │   │   └── video_processing/
-│   │   │       ├── analyze_ear.py
-│   │   │       ├── analyze_emotion.py
-│   │   │       ├── analyze_head_pose.py
-│   │   │       ├── engagement_calculator.py
-│   │   │       ├── face_analysis_pipeline.py
-│   │   │       ├── face_detection.py
-│   │   │       ├── service.py
-│   │   │       └── video_stream.py
-│   │   └── main.py        # Application entry point
+│   │   └── services/      # Business logic
 │   ├── tests/             # Backend tests
 │   ├── scripts/           # Utility scripts
 │   ├── pyproject.toml
 │   └── Dockerfile
 ├── frontend/               # Streamlit frontend
-│   ├── src/               # Source code
-│   │   ├── main.py        # Application entry point
-│   │   └── styles.css
-│   ├── pyproject.toml
-│   └── Dockerfile
+│   ├── emotion_detection_app.py
+│   └── styles.css
 └── tests/                  # Manual tests
     ├── html/              # WebSocket test page
     └── manual/            # Manual test scripts
