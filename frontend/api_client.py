@@ -69,7 +69,8 @@ class EngagementAPIClient:
             self.disconnect()
             self.connect(self._room_id, self._client_name or "streamlit-user")
             return True
-        except ConnectionError:
+        except ConnectionError as e:
+            logger.warning(f"Reconnect failed: {e}")
             return False
 
     def send_frame(self, frame: np.ndarray) -> tuple[np.ndarray | None, list[dict]]:
