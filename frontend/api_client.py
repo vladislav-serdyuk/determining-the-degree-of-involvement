@@ -91,21 +91,24 @@ class EngagementAPIClient:
         _, buffer = cv2.imencode(".jpg", frame)
         image_b64 = base64.b64encode(buffer).decode("utf-8")
 
-        try:
-            self._ws.send(json.dumps({"image": image_b64}))
-            response_raw = self._ws.recv()
-            response = json.loads(response_raw)
-        except (websocket.WebSocketException, ConnectionError, OSError) as e:
-            logger.warning(f"WebSocket send/recv error: {e}")
-            if self._reconnect():
-                try:
-                    self._ws.send(json.dumps({"image": image_b64}))
-                    response_raw = self._ws.recv()
-                    response = json.loads(response_raw)
-                except Exception:
+        # Цикл retry: первая попытка + одна попытка после реконнекта
+        response = None
+        for attempt in range(2):
+            try:
+                self._ws.send(json.dumps({"image": image_b64}))
+                response_raw = self._ws.recv()
+                response = json.loads(response_raw)
+                break
+            except (websocket.WebSocketException, ConnectionError, OSError) as e:
+                if attempt == 0:
+                    logger.warning(f"WebSocket send/recv error: {e}")
+                    if not self._reconnect():
+                        return None, []
+                else:
                     return None, []
-            else:
-                return None, []
+
+        if response is None:
+            return None, []
 
         # Обработка ошибки от сервера
         if "error" in response:
