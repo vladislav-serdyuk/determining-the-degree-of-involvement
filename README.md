@@ -1,8 +1,9 @@
-# Real-time Engagement Detection System
+# Real-time Engagement Detection System 1.0.0-beta
 
 [![Python 3.12+](https://img.shields.io/badge/Python-3.12+-blue.svg)](https://www.python.org/)
-[![License: XXX](https://img.shields.io/badge/License-XXX-green.svg)](LICENSE)
 [![Docker](https://img.shields.io/badge/Docker-ready-blue.svg)](https://docker.com/)
+[![semver](https://img.shields.io/badge/semver-2.0.0-blue.svg)](https://semver.org/)
+[![License: XXX](https://img.shields.io/badge/License-XXX-green.svg)](LICENSE)
 
 Real-time facial emotion recognition system with attention tracking. Detects emotions, blinks, and head pose to analyze user engagement through webcam or video upload.
 
