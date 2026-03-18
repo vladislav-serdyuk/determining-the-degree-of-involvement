@@ -1,8 +1,9 @@
-# Real-time Engagement Detection System 1.0.0-beta
+# Real-time Engagement Detection System
 
 [![Python 3.12+](https://img.shields.io/badge/Python-3.12+-blue.svg)](https://www.python.org/)
 [![Docker](https://img.shields.io/badge/Docker-ready-blue.svg)](https://docker.com/)
-[![semver](https://img.shields.io/badge/semver-2.0.0-blue.svg)](https://semver.org/)
+![Version](https://img.shields.io/badge/Version-1.0.0--beta-blue.svg)
+[![SemVer](https://img.shields.io/badge/SemVer-2.0.0-blue.svg)](https://semver.org/)
 [![License: XXX](https://img.shields.io/badge/License-XXX-green.svg)](LICENSE)
 
 Real-time facial emotion recognition system with attention tracking. Detects emotions, blinks, and head pose to analyze user engagement through webcam or video upload.
@@ -94,6 +95,9 @@ streamlit run engagement_app.py
 │   ├── engagement_app.py  # Main application
 │   ├── api_client.py      # WebSocket client
 │   ├── styles.css
+│   ├── tools/             # Standalone utility tools
+│   │   ├── param_testing_app.py  # Parameter tuning
+│   │   └── requirements.txt
 │   └── requirements.txt
 └── tests/                  # Manual tests
     ├── html/              # WebSocket test page
@@ -135,7 +139,8 @@ flowchart TB
     ER --> EC
     EAR --> EC
     HP --> EC
-    EC -->|"JSON<br/>{image, results}"| WS
+    EC --> Service
+    Service -->|"JSON<br/>{image, results}"| WS
     WS --> Client
     Client -->|"Processed Frame"| UI
 ```
@@ -162,6 +167,8 @@ flowchart TB
 ```
 Engagement = 0.42 × Emotion + 0.33 × Eye_Score + 0.25 × HeadPose_Score
 ```
+
+> Weights may vary.
 
 ---
 
