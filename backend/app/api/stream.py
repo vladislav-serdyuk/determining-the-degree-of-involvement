@@ -14,6 +14,7 @@ import numpy as np
 from cv2 import error
 from fastapi import APIRouter, Depends, Path, Query, WebSocket, WebSocketDisconnect, status
 from pydantic import ValidationError
+from redis.exceptions import ConnectionError as RedisConnectionError
 
 from app.db.rooms_and_clients import Client, ClientNotFoundError, RoomNotFoundError
 from app.schemas.stream import (
@@ -62,7 +63,16 @@ async def stream(
     client_id = uuid4()
     client_name = name if name else f"client_{client_id.hex[:8]}"
     client: Client = Client(id_=client_id, name=client_name, room_id=room_id)
-    await room_service.add_client(client)
+
+    # Регистрация клиента в Redis
+    try:
+        await room_service.add_client(client)
+    except RedisConnectionError:
+        logger.error(f"Redis unavailable - cannot register client {client.id_} in room {room_id}")
+        await websocket.send_json(ErrorResponse(error="Redis unavailable, try again later").model_dump())
+        await websocket.close(status.WS_1011_INTERNAL_ERROR)
+        return
+
     logger.info(f"Client {client.id_} connected to room {room_id} (name: {client_name})")
     try:
         while True:
@@ -98,7 +108,10 @@ async def stream(
             _, prc_buffer = cv2.imencode(".jpg", new_img)
             prc_b64 = base64.b64encode(prc_buffer).decode("utf-8")
 
-            await room_service.send_frame(client, image_b64, prc_b64, results)
+            try:
+                await room_service.send_frame(client, image_b64, prc_b64, results)
+            except RedisConnectionError:
+                logger.error(f"Redis unavailable during send_frame for client {client.id_}")
 
             # Сериализация ответа через Pydantic-схему
             results_validated = [FaceAnalysisResult.model_validate(asdict(r)) for r in results]
@@ -107,7 +120,10 @@ async def stream(
     except WebSocketDisconnect:
         logger.info(f"Client {client.id_} disconnected from room {room_id}")
     finally:
-        await room_service.remove_client(client)
+        try:
+            await room_service.remove_client(client)
+        except RedisConnectionError:
+            logger.error(f"Redis unavailable - could not remove client {client.id_} from room {room_id}")
         await analyzer_service.remove(client.id_)
 
 
@@ -144,11 +160,25 @@ async def client_stream(
         await websocket.send_json(ErrorResponse(error=str(e)).model_dump())
         await websocket.close(status.WS_1008_POLICY_VIOLATION)
         return
+    except RedisConnectionError:
+        logger.error(f"Redis unavailable - cannot get client {client_id} in room {room_id}")
+        await websocket.send_json(ErrorResponse(error="Redis unavailable, try again later").model_dump())
+        await websocket.close(status.WS_1011_INTERNAL_ERROR)
+        return
     try:
         while True:
-            if await room_service.client_is_closed(client):
+            try:
+                if await room_service.client_is_closed(client):
+                    return
+                frame_data = await room_service.get_frame_raw(client)
+            except RedisConnectionError:
+                logger.error(f"Redis unavailable in output stream for client {client_id} in room {room_id}")
+                await websocket.send_json(
+                    ErrorResponse(error="Redis unavailable, try again later").model_dump()
+                )
+                await websocket.close(status.WS_1011_INTERNAL_ERROR)
                 return
-            frame_data = await room_service.get_frame_raw(client)
+
             if frame_data is None:
                 await asyncio.sleep(0.01)
                 continue
