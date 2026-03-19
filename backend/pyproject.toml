@@ -1,6 +1,6 @@
 [project]
 name = "engagement-detection-backend"
-version = "0.1.0"
+version = "1.0.0-beta"
 description = "Real-time engagement detection backend with FastAPI"
 requires-python = ">=3.12"
 dependencies = [

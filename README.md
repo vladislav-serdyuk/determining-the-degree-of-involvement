@@ -1,10 +1,14 @@
 # Real-time Engagement Detection System
 
 [![Python 3.12+](https://img.shields.io/badge/Python-3.12+-blue.svg)](https://www.python.org/)
-[![License: XXX](https://img.shields.io/badge/License-XXX-green.svg)](LICENSE)
 [![Docker](https://img.shields.io/badge/Docker-ready-blue.svg)](https://docker.com/)
+![Version](https://img.shields.io/badge/Version-1.0.0--beta-blue.svg)
+[![SemVer](https://img.shields.io/badge/SemVer-2.0.0-blue.svg)](https://semver.org/)
+[![License: XXX](https://img.shields.io/badge/License-XXX-green.svg)](LICENSE)
 
 Real-time facial emotion recognition system with attention tracking. Detects emotions, blinks, and head pose to analyze user engagement through webcam or video upload.
+
+![Demo Streamlit frontend](docs/demo-streamlit-frontend.gif)
 
 ## Quick Start
 
@@ -36,7 +40,7 @@ cd ../frontend && pip install -r requirements.txt
 #### 2. Run Redis Server (required for backend)
 
 ```bash
-redis-server
+redis-server --requirepass password
 ```
 
 #### 3. Run Backend
@@ -50,21 +54,21 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 ```bash
 cd frontend
-streamlit run emotion_detection_app.py
+streamlit run engagement_app.py
 ```
 
 ---
 
 ## Tech Stack
 
-| Component           | Technology            |
-|---------------------|-----------------------|
-| Face Detection      | MediaPipe             |
-| Emotion Recognition | PyTorch + EmotiEffLib |
-| Video Processing    | OpenCV                |
-| Backend             | FastAPI + WebSocket   |
-| Frontend            | Streamlit             |
-| Caching/Temp Storage | Redis                |
+| Component            | Technology            |
+|----------------------|-----------------------|
+| Face Detection       | MediaPipe             |
+| Emotion Recognition  | PyTorch + EmotiEffLib |
+| Video Processing     | OpenCV                |
+| Backend              | FastAPI + WebSocket   |
+| Frontend             | Streamlit             |
+| Caching/Temp Storage | Redis                 |
 
 ---
 
@@ -81,18 +85,90 @@ streamlit run emotion_detection_app.py
 │   │   ├── core/          # Configuration
 │   │   ├── db/            # Database
 │   │   ├── schemas/       # Pydantic models
-│   │   └── services/      # Business logic
+│   │   ├── services/      # Business logic
+│   │   └── main.py        # Application entry point
 │   ├── tests/             # Backend tests
 │   ├── scripts/           # Utility scripts
 │   ├── pyproject.toml
 │   └── Dockerfile
 ├── frontend/               # Streamlit frontend
-│   ├── emotion_detection_app.py
-│   └── styles.css
+│   ├── engagement_app.py  # Main application
+│   ├── api_client.py      # WebSocket client
+│   ├── styles.css
+│   ├── tools/             # Standalone utility tools
+│   │   ├── param_testing_app.py  # Parameter tuning
+│   │   └── requirements.txt
+│   └── requirements.txt
 └── tests/                  # Manual tests
     ├── html/              # WebSocket test page
     └── manual/            # Manual test scripts
 ```
+
+---
+
+## Architecture
+
+```mermaid
+flowchart TB
+    subgraph Frontend["Frontend (Streamlit)"]
+        Cam["Webcam<br/>OpenCV"]
+        Client["API Client<br/>WebSocket"]
+        UI["Streamlit UI<br/>Charts/Metrics"]
+    end
+    
+    subgraph Backend["Backend (FastAPI)"]
+        WS["WebSocket<br/>/ws/rooms/{room_id}/stream"]
+        Service["FaceAnalysisPipelineService"]
+        
+        subgraph Pipeline["FaceAnalysisPipeline"]
+            FD["FaceDetector<br/>MediaPipe"]
+            ER["EmotionRecognizer<br/>PyTorch"]
+            EAR["EAR Analyzer<br/>Eye Aspect Ratio"]
+            HP["HeadPoseEstimator<br/>PnP Algorithm"]
+            EC["EngagementCalculator<br/>Weighted Score"]
+        end
+    end
+    
+    Cam -->|"Frame<br/>BGR"| Client
+    Client -->|"JSON<br/>{image: base64}"| WS
+    WS --> Service
+    Service --> FD
+    FD --> ER
+    FD --> EAR
+    FD --> HP
+    ER --> EC
+    EAR --> EC
+    HP --> EC
+    EC --> Service
+    Service -->|"JSON<br/>{image, results}"| WS
+    WS --> Client
+    Client -->|"Processed Frame"| UI
+```
+
+### Data Flow
+
+1. **Capture**: Frontend captures video frame from webcam (OpenCV)
+2. **Encode**: Frame → JPEG → Base64 → JSON
+3. **Process**: Backend WebSocket → Decode → Pipeline → Encode response
+4. **Display**: Frontend renders processed frame and metrics
+
+### Processing Pipeline
+
+| Stage | Component           | Technology               |
+|-------|---------------------|--------------------------|
+| 1     | Face Detection      | MediaPipe Face Detection |
+| 2     | Emotion Recognition | PyTorch + EmotiEffLib    |
+| 3     | Eye Tracking        | EAR (Eye Aspect Ratio)   |
+| 4     | Head Pose           | PnP Algorithm            |
+| 5     | Engagement Score    | Weighted Formula         |
+
+### Engagement Formula
+
+```
+Engagement = 0.42 × Emotion + 0.33 × Eye_Score + 0.25 × HeadPose_Score
+```
+
+> Weights may vary.
 
 ---
 
