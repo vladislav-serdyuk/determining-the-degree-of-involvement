@@ -115,7 +115,9 @@ async def stream(
 
             # Сериализация ответа через Pydantic-схему
             results_validated = [FaceAnalysisResult.model_validate(asdict(r)) for r in results]
-            response = FrameResponse(image=prc_b64, results=results_validated)
+            response = FrameResponse(
+                image=prc_b64, results=results_validated, video_timestamp=frame_request.video_timestamp
+            )
             await websocket.send_json(response.model_dump())
     except WebSocketDisconnect:
         logger.info(f"Client {client.id_} disconnected from room {room_id}")
