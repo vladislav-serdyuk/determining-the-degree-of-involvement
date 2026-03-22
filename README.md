@@ -15,6 +15,7 @@ Real-time facial emotion recognition system with attention tracking. Detects emo
 ```bash
 git clone https://github.com/FunnyValentain/determining-the-degree-of-involvement.git
 cd determining-the-degree-of-involvement
+cp .env.example .env  # Edit .env for configuration
 ```
 
 ### Docker Compose (Recommended)
