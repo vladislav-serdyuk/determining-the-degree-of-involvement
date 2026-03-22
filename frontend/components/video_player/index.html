@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: transparent;
+            font-family: sans-serif;
+        }
+        .player-container {
+            width: 100%;
+            background: #000;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        video {
+            width: 100%;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="player-container">
+        <video id="player" controls></video>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/streamlit-component-lib@2.0.0/streamlit-component-lib.js"></script>
+    <script>
+        const video = document.getElementById("player");
+        let currentUrl = "";
+
+        function sendState() {
+            Streamlit.setComponentValue({
+                currentTime: video.currentTime,
+                playing: !video.paused,
+                duration: video.duration || 0
+            });
+        }
+
+        function onRender(event) {
+            const args = event.detail.args;
+            const url = args.url || "";
+
+            // Обновление src при смене URL
+            if (url && url !== currentUrl) {
+                currentUrl = url;
+                video.src = url;
+                video.load();
+            }
+
+            Streamlit.setFrameHeight();
+        }
+
+        // Отправка состояния при обновлении времени (~каждые 250мс)
+        video.addEventListener("timeupdate", sendState);
+
+        // Отправка состояния при play/pause/seeked
+        video.addEventListener("play", sendState);
+        video.addEventListener("pause", sendState);
+        video.addEventListener("seeked", sendState);
+
+        // Отправка состояния при загрузке метаданных (duration)
+        video.addEventListener("loadedmetadata", function() {
+            Streamlit.setFrameHeight();
+            sendState();
+        });
+
+        window.addEventListener("streamlit:render", onRender);
+        Streamlit.setComponentReady();
+        Streamlit.setFrameHeight();
+    </script>
+</body>
+</html>
