@@ -11,7 +11,7 @@ import numpy as np
 import streamlit as st
 from PIL import Image
 
-sys.path.append('../backend')
+sys.path.append(str(Path(__file__).resolve().parent.parent.parent / "backend"))
 
 try:
     from app.services.video_processing import (
@@ -31,6 +31,7 @@ EAR_HEADPOSE_AVAILABLE = False
 try:
     from app.services.video_processing import EyeAspectRatioAnalyzer
     from app.services.video_processing import HeadPoseEstimator
+    from app.services.video_processing import EngagementCalculator
 
     EAR_HEADPOSE_AVAILABLE = True
 except ImportError:
@@ -56,7 +57,7 @@ st.set_page_config(
 # Загрузка внешних CSS стилей
 def load_css():
     """Загружает внешний CSS файл"""
-    css_file = Path(__file__).parent.parent / "styles.css"
+    css_file = Path(__file__).resolve().parent.parent / "styles.css"
     if css_file.exists():
         with open(css_file, encoding='utf-8') as f:
             st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
@@ -107,12 +108,18 @@ class EmotionDetectionProcessor:
                 if EAR_HEADPOSE_AVAILABLE and params.get('enable_head_pose', False):
                     head_pose_estimator = HeadPoseEstimator()
 
+                # Калькулятор вовлечённости
+                engagement_calculator = None
+                if EAR_HEADPOSE_AVAILABLE:
+                    engagement_calculator = EngagementCalculator()
+
                 # Основной детектор
                 self.detector = FaceAnalysisPipeline(
                     face_detector,
                     emotion_recognizer,
                     ear_analyzer=ear_analyzer,
                     head_pose_estimator=head_pose_estimator,
+                    engagement_calculator=engagement_calculator,
                     use_face_mesh=(ear_analyzer is not None or head_pose_estimator is not None)
                 )
 
@@ -599,7 +606,11 @@ def display_sidebar():
                 'confidence_threshold': 0.55,
                 'ambiguity_threshold': 0.15,
                 'flip_h': False,
-                'show_preview': False
+                'show_preview': False,
+                'enable_ear': False,
+                'enable_head_pose': False,
+                'ear_threshold': 0.25,
+                'consec_frames': 3,
             }
             st.rerun()
 
@@ -954,11 +965,17 @@ def create_webcam_section():
                     if EAR_HEADPOSE_AVAILABLE and params.get('enable_head_pose', False):
                         head_pose_estimator = HeadPoseEstimator()
 
+                    # Калькулятор вовлечённости
+                    engagement_calculator = None
+                    if EAR_HEADPOSE_AVAILABLE:
+                        engagement_calculator = EngagementCalculator()
+
                     st.session_state.webcam_detector = FaceAnalysisPipeline(
                         face_detector,
                         emotion_recognizer,
                         ear_analyzer=ear_analyzer,
                         head_pose_estimator=head_pose_estimator,
+                        engagement_calculator=engagement_calculator,
                         use_face_mesh=(ear_analyzer is not None or head_pose_estimator is not None)
                     )
                     st.session_state.prev_webcam_params = params.copy()
