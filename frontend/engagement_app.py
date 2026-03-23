@@ -230,32 +230,10 @@ def create_ear_chart(timestamps, ear_history):
 
 
 # ============================================
-# СЕКЦИЯ ГРАФИКОВ (fragment для устранения мерцания)
+# КОНСТАНТА: интервал обновления графиков (в кадрах)
 # ============================================
 
-
-@st.fragment(run_every="1s")
-def charts_fragment():
-    """Секция графиков, обновляется независимо от основного цикла"""
-    pie_fig = create_emotion_pie_chart(st.session_state.emotion_history)
-    if pie_fig:
-        st.plotly_chart(pie_fig, use_container_width=True)
-
-    pose_fig = create_head_pose_chart(
-        st.session_state.timestamps,
-        st.session_state.head_pose_history["pitch"],
-        st.session_state.head_pose_history["yaw"],
-        st.session_state.head_pose_history["roll"],
-    )
-    if pose_fig:
-        st.plotly_chart(pose_fig, use_container_width=True)
-
-    ear_fig = create_ear_chart(
-        st.session_state.timestamps,
-        st.session_state.ear_history,
-    )
-    if ear_fig:
-        st.plotly_chart(ear_fig, use_container_width=True)
+CHART_UPDATE_INTERVAL = 15  # Обновление графиков каждые N кадров
 
 
 # ============================================
@@ -325,8 +303,10 @@ def create_webcam_section():
     with right_col:
         st.markdown("#### 📈 Аналитика в реальном времени")
 
-        # Графики через @st.fragment (обновляются без мерцания)
-        charts_fragment()
+        # Placeholder'ы для графиков (обновляются in-place, без мерцания)
+        pie_placeholder = st.empty()
+        pose_placeholder = st.empty()
+        ear_placeholder = st.empty()
 
     # Запуск веб-камеры
     if st.session_state.webcam_running:
@@ -444,6 +424,35 @@ def create_webcam_section():
                         yaw_metric.metric("Yaw", "—")
                         roll_metric.metric("Roll", "—")
 
+                    # Обновление графиков с фиксированной частотой
+                    if st.session_state.frame_count % CHART_UPDATE_INTERVAL == 0:
+                        pie_fig = create_emotion_pie_chart(
+                            st.session_state.emotion_history
+                        )
+                        if pie_fig:
+                            pie_placeholder.plotly_chart(
+                                pie_fig, use_container_width=True
+                            )
+
+                        pose_fig = create_head_pose_chart(
+                            st.session_state.timestamps,
+                            st.session_state.head_pose_history["pitch"],
+                            st.session_state.head_pose_history["yaw"],
+                            st.session_state.head_pose_history["roll"],
+                        )
+                        if pose_fig:
+                            pose_placeholder.plotly_chart(
+                                pose_fig, use_container_width=True
+                            )
+
+                        ear_fig = create_ear_chart(
+                            st.session_state.timestamps,
+                            st.session_state.ear_history,
+                        )
+                        if ear_fig:
+                            ear_placeholder.plotly_chart(
+                                ear_fig, use_container_width=True
+                            )
 
             except Exception as e:
                 st.error(f"Ошибка: {e}")
