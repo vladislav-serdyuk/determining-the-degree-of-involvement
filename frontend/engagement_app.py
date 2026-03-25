@@ -338,7 +338,7 @@ def create_webcam_section():
                     st.session_state.timestamps.append(current_timestamp)
 
                     # Отправка кадра на бэкенд и получение результатов
-                    processed_frame, results = api_client.send_frame(frame)
+                    processed_frame, results, _ = api_client.send_frame(frame)
 
                     # Отображение видео
                     if processed_frame is not None:

@@ -1,0 +1,635 @@
+import csv
+import io
+import os
+from collections import deque
+from time import time as current_time
+
+import cv2
+import plotly.express as px
+import plotly.graph_objects as go
+import streamlit as st
+
+from api_client import EngagementAPIClient
+from components.video_player import video_player
+
+APP_TITLE = "Анализ вовлечённости при просмотре видео"
+APP_ICON = "🎬"
+
+# ============================================
+# CSS СТИЛИ
+# ============================================
+
+st.set_page_config(
+    page_title=APP_TITLE,
+    page_icon=APP_ICON,
+    layout="wide",
+    initial_sidebar_state="collapsed",
+)
+
+
+def load_css():
+    """Загрузка внешнего CSS файла"""
+    from pathlib import Path
+
+    css_file = Path(__file__).parent / "styles.css"
+    if css_file.exists():
+        with open(css_file, encoding="utf-8") as f:
+            st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+    else:
+        # Встроенные стили для компактного отображения
+        st.markdown(
+            """
+        <style>
+        .main-header {
+            text-align: center;
+            color: #4CAF50;
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+        .camera-container {
+            border: 3px solid #4CAF50;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+            margin-bottom: 15px;
+        }
+        .metric-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 10px;
+            padding: 15px;
+            color: white;
+            text-align: center;
+            margin: 10px 0;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .emotion-badge {
+            display: inline-block;
+            background: #4CAF50;
+            color: white;
+            border-radius: 20px;
+            padding: 5px 15px;
+            margin: 3px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        </style>
+        """,
+            unsafe_allow_html=True,
+        )
+
+
+load_css()
+
+
+# ============================================
+# ИНИЦИАЛИЗАЦИЯ СЕССИИ
+# ============================================
+
+BACKEND_WS_URL = os.getenv("BACKEND_WS_URL", "ws://localhost:8000")
+BACKEND_HTTP_URL = os.getenv("BACKEND_HTTP_URL", "http://localhost:8000")
+
+if "api_client" not in st.session_state:
+    st.session_state.api_client = EngagementAPIClient(
+        backend_ws_url=BACKEND_WS_URL,
+        backend_http_url=BACKEND_HTTP_URL,
+    )
+
+if "webcam_running" not in st.session_state:
+    st.session_state.webcam_running = False
+
+if "backend_healthy" not in st.session_state:
+    st.session_state.backend_healthy = False
+
+if "last_health_check" not in st.session_state:
+    st.session_state.last_health_check = 0.0
+
+# История для графиков
+if "emotion_history" not in st.session_state:
+    st.session_state.emotion_history = deque(maxlen=100)
+
+if "head_pose_history" not in st.session_state:
+    st.session_state.head_pose_history = {
+        "pitch": deque(maxlen=100),
+        "yaw": deque(maxlen=100),
+        "roll": deque(maxlen=100),
+    }
+
+if "ear_history" not in st.session_state:
+    st.session_state.ear_history = deque(maxlen=100)
+
+if "timestamps" not in st.session_state:
+    st.session_state.timestamps = deque(maxlen=100)
+
+if "frame_count" not in st.session_state:
+    st.session_state.frame_count = 0
+
+# Временные метки видео и история вовлечённости
+if "video_timestamps" not in st.session_state:
+    st.session_state.video_timestamps = deque(maxlen=100)
+
+if "engagement_history" not in st.session_state:
+    st.session_state.engagement_history = deque(maxlen=100)
+
+# Полная история для CSV-экспорта
+if "export_data" not in st.session_state:
+    st.session_state.export_data = []
+
+HEALTH_CHECK_INTERVAL = 10.0  # Интервал проверки доступности бэкенда (секунды)
+
+
+def check_backend_health() -> bool:
+    """Проверка доступности бэкенда с кэшированием результата"""
+    now = current_time()
+    if now - st.session_state.last_health_check < HEALTH_CHECK_INTERVAL:
+        return st.session_state.backend_healthy
+
+    api_client: EngagementAPIClient = st.session_state.api_client
+    st.session_state.backend_healthy = api_client.check_health()
+    st.session_state.last_health_check = now
+    return st.session_state.backend_healthy
+
+
+# ============================================
+# ФУНКЦИИ ДЛЯ ГРАФИКОВ
+# ============================================
+
+
+def create_emotion_pie_chart(emotion_history):
+    """Создание круговой диаграммы распределения эмоций"""
+    if not emotion_history:
+        return None
+
+    counts = {}
+    for emotion in emotion_history:
+        counts[emotion] = counts.get(emotion, 0) + 1
+
+    fig = go.Figure(
+        data=[
+            go.Pie(
+                labels=list(counts.keys()),
+                values=list(counts.values()),
+                hole=0.4,
+                marker=dict(colors=px.colors.qualitative.Set3),
+            )
+        ]
+    )
+    fig.update_layout(
+        title="Распределение эмоций",
+        height=200,
+        margin=dict(l=10, r=10, t=30, b=10),
+        showlegend=True,
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="center", x=0.5),
+    )
+    return fig
+
+
+def create_head_pose_chart(timestamps, pitch_history, yaw_history, roll_history):
+    """Создание графика положения головы"""
+    if not timestamps or not pitch_history:
+        return None
+
+    t = list(timestamps)[-30:]
+    pitch = list(pitch_history)[-30:]
+    yaw = list(yaw_history)[-30:]
+    roll = list(roll_history)[-30:]
+
+    fig = go.Figure()
+
+    fig.add_trace(go.Scatter(x=t, y=pitch, mode="lines", name="Pitch", line=dict(color="red", width=2)))
+    fig.add_trace(go.Scatter(x=t, y=yaw, mode="lines", name="Yaw", line=dict(color="green", width=2)))
+    fig.add_trace(go.Scatter(x=t, y=roll, mode="lines", name="Roll", line=dict(color="blue", width=2)))
+
+    fig.update_layout(
+        title="Положение головы",
+        xaxis_title="Время (с)",
+        yaxis_title="Угол (градусы)",
+        height=200,
+        margin=dict(l=10, r=10, t=30, b=10),
+        showlegend=True,
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="center", x=0.5),
+    )
+
+    fig.add_hline(y=0, line_dash="dash", line_color="gray", opacity=0.5)
+
+    return fig
+
+
+def create_ear_chart(timestamps, ear_history):
+    """Создание графика EAR (Eye Aspect Ratio)"""
+    if not timestamps or not ear_history:
+        return None
+
+    t = list(timestamps)[-30:]
+    ear = list(ear_history)[-30:]
+
+    fig = go.Figure()
+
+    fig.add_trace(go.Scatter(x=t, y=ear, mode="lines", name="EAR", line=dict(color="purple", width=2)))
+
+    fig.update_layout(
+        title="Eye Aspect Ratio (EAR)",
+        xaxis_title="Время (с)",
+        yaxis_title="EAR",
+        height=150,
+        margin=dict(l=10, r=10, t=30, b=10),
+        showlegend=False,
+    )
+
+    fig.add_hline(y=0.25, line_dash="dash", line_color="red", opacity=0.5)
+    fig.add_annotation(
+        x=0.5, y=0.27, text="Порог закрытия", showarrow=False, xref="paper", yref="y", font=dict(size=10)
+    )
+
+    return fig
+
+
+def create_engagement_timeline(video_timestamps, engagement_history):
+    """Создание графика вовлечённости по временной шкале видео"""
+    if not video_timestamps or not engagement_history:
+        return None
+
+    vt = list(video_timestamps)[-50:]
+    eng = list(engagement_history)[-50:]
+
+    fig = go.Figure()
+
+    fig.add_trace(
+        go.Scatter(
+            x=vt,
+            y=eng,
+            mode="lines+markers",
+            name="Вовлечённость",
+            line=dict(color="#4CAF50", width=2),
+            marker=dict(size=4),
+        )
+    )
+
+    # Цветовые зоны уровней вовлечённости
+    fig.add_hrect(y0=0.75, y1=1.0, fillcolor="green", opacity=0.08, line_width=0)
+    fig.add_hrect(y0=0.50, y1=0.75, fillcolor="orange", opacity=0.08, line_width=0)
+    fig.add_hrect(y0=0.25, y1=0.50, fillcolor="yellow", opacity=0.08, line_width=0)
+    fig.add_hrect(y0=0.0, y1=0.25, fillcolor="red", opacity=0.08, line_width=0)
+
+    fig.update_layout(
+        title="Вовлечённость по времени видео",
+        xaxis_title="Время видео (с)",
+        yaxis_title="Score",
+        yaxis=dict(range=[0, 1]),
+        height=250,
+        margin=dict(l=10, r=10, t=30, b=10),
+        showlegend=False,
+    )
+
+    return fig
+
+
+# ============================================
+# СЕКЦИЯ ГРАФИКОВ (fragment для устранения мерцания)
+# ============================================
+
+
+@st.fragment(run_every="1s")
+def charts_section():
+    """Секция графиков, обновляется независимо от основного цикла"""
+    # Верхняя строка: вовлечённость + эмоции
+    eng_col, pie_col = st.columns(2)
+
+    with eng_col:
+        eng_fig = create_engagement_timeline(
+            st.session_state.video_timestamps,
+            st.session_state.engagement_history,
+        )
+        if eng_fig:
+            st.plotly_chart(eng_fig, use_container_width=True)
+        else:
+            st.info("Данные вовлечённости появятся при воспроизведении видео")
+
+    with pie_col:
+        pie_fig = create_emotion_pie_chart(st.session_state.emotion_history)
+        if pie_fig:
+            st.plotly_chart(pie_fig, use_container_width=True)
+        else:
+            st.info("Данные эмоций появятся при запуске анализа")
+
+    # Нижняя строка: положение головы + EAR
+    pose_col, ear_col = st.columns(2)
+
+    with pose_col:
+        pose_fig = create_head_pose_chart(
+            st.session_state.timestamps,
+            st.session_state.head_pose_history["pitch"],
+            st.session_state.head_pose_history["yaw"],
+            st.session_state.head_pose_history["roll"],
+        )
+        if pose_fig:
+            st.plotly_chart(pose_fig, use_container_width=True)
+
+    with ear_col:
+        ear_fig = create_ear_chart(
+            st.session_state.timestamps,
+            st.session_state.ear_history,
+        )
+        if ear_fig:
+            st.plotly_chart(ear_fig, use_container_width=True)
+
+
+# ============================================
+# CSV-ЭКСПОРТ
+# ============================================
+
+
+def export_csv():
+    """Формирование CSV-файла с данными анализа"""
+    if not st.session_state.export_data:
+        return None
+
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow([
+        "video_time_s", "emotion", "confidence", "engagement_score",
+        "engagement_level", "ear", "pitch", "yaw", "roll",
+    ])
+
+    for row in st.session_state.export_data:
+        writer.writerow([
+            f"{row.get('video_time', 0):.2f}",
+            row.get("emotion", ""),
+            f"{row.get('confidence', 0):.3f}",
+            f"{row.get('engagement_score', 0):.3f}",
+            row.get("engagement_level", ""),
+            f"{row.get('ear', 0):.3f}" if row.get("ear") is not None else "",
+            f"{row.get('pitch', 0):.1f}" if row.get("pitch") is not None else "",
+            f"{row.get('yaw', 0):.1f}" if row.get("yaw") is not None else "",
+            f"{row.get('roll', 0):.1f}" if row.get("roll") is not None else "",
+        ])
+
+    return buf.getvalue()
+
+
+# ============================================
+# ОСНОВНОЙ ИНТЕРФЕЙС
+# ============================================
+
+
+def display_header():
+    """Отображение заголовка приложения"""
+    st.markdown(f'<h1 class="main-header">{APP_ICON} {APP_TITLE}</h1>', unsafe_allow_html=True)
+    st.markdown("---")
+
+
+def create_main_section():
+    """Создание основной секции приложения"""
+
+    # Проверка доступности бэкенда (с кэшированием)
+    backend_available = check_backend_health()
+
+    if not backend_available:
+        st.warning("Бэкенд недоступен. Убедитесь, что сервер запущен и доступен.")
+        st.info(f"Адрес бэкенда: {BACKEND_HTTP_URL}")
+        return
+
+    api_client: EngagementAPIClient = st.session_state.api_client
+
+    # Ввод URL видео
+    video_url = st.text_input(
+        "URL видео (.mp4, .webm, .ogg)",
+        placeholder="https://example.com/lecture.mp4",
+        key="video_url_input",
+    )
+
+    # Верхняя строка: видеоплеер (2/3) + веб-камера (1/3)
+    video_col, webcam_col = st.columns([2, 1])
+
+    # Состояние видеоплеера
+    player_state = None
+
+    with video_col:
+        st.markdown("#### 🎬 Видео")
+        if video_url:
+            player_state = video_player(video_url, height=360, key="main_player")
+            if player_state:
+                duration = player_state.get("duration", 0)
+                current_t = player_state.get("currentTime", 0)
+                playing = player_state.get("playing", False)
+                status_text = "▶️ Воспроизведение" if playing else "⏸️ Пауза"
+                st.caption(f"{status_text} — {current_t:.1f}с / {duration:.1f}с")
+        else:
+            st.info("Введите URL видеофайла для начала просмотра")
+
+    with webcam_col:
+        st.markdown("#### 📹 Веб-камера")
+
+        # Контейнер для камеры
+        camera_container = st.container()
+        with camera_container:
+            video_placeholder = st.empty()
+
+        # Кнопки управления
+        col1, col2 = st.columns(2)
+        with col1:
+            if not st.session_state.webcam_running:
+                if st.button("▶️ Запустить", width="stretch"):
+                    st.session_state.webcam_running = True
+                    st.rerun()
+
+        with col2:
+            if st.session_state.webcam_running:
+                if st.button("⏹️ Стоп", width="stretch"):
+                    st.session_state.webcam_running = False
+                    st.rerun()
+
+        # Текущие метрики
+        st.markdown("---")
+        st.markdown("#### 📊 Показатели")
+
+        emotion_metric = st.empty()
+        engagement_metric = st.empty()
+
+        # Метрики положения головы
+        metrics_container = st.container()
+        with metrics_container:
+            pitch_metric = st.empty()
+            yaw_metric = st.empty()
+            roll_metric = st.empty()
+
+    # Разделитель перед графиками
+    st.markdown("---")
+    st.markdown("#### 📈 Аналитика в реальном времени")
+
+    # Графики через @st.fragment (без мерцания)
+    charts_section()
+
+    # CSV-экспорт
+    if st.session_state.export_data:
+        csv_data = export_csv()
+        if csv_data:
+            st.download_button(
+                "📥 Экспорт данных (CSV)",
+                csv_data,
+                "engagement_data.csv",
+                "text/csv",
+                use_container_width=True,
+            )
+
+    # Запуск веб-камеры
+    if st.session_state.webcam_running:
+        cap = cv2.VideoCapture(0)
+
+        if not cap.isOpened():
+            st.error("Не удалось открыть веб-камеру")
+            st.session_state.webcam_running = False
+        else:
+            # Установка компактного разрешения для камеры
+            cap.set(cv2.CAP_PROP_FRAME_WIDTH, 320)
+            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 240)
+            cap.set(cv2.CAP_PROP_FPS, 15)
+
+            # Подключение к бэкенду через WebSocket
+            if not api_client.is_connected:
+                try:
+                    api_client.connect(room_id="video-engagement-app", name="video-engagement-user")
+                except ConnectionError as e:
+                    st.error(f"Не удалось подключиться к бэкенду: {e}")
+                    cap.release()
+                    st.session_state.webcam_running = False
+                    return
+
+            try:
+                start_time = current_time()
+
+                while st.session_state.webcam_running:
+                    ret, frame = cap.read()
+                    if not ret:
+                        break
+
+                    st.session_state.frame_count += 1
+                    current_timestamp = current_time() - start_time
+                    st.session_state.timestamps.append(current_timestamp)
+
+                    # Определение временной метки видео
+                    video_ts = None
+                    if player_state and player_state.get("currentTime") is not None:
+                        video_ts = player_state.get("currentTime")
+
+                    # Отправка кадра на бэкенд с временной меткой видео
+                    processed_frame, results, echoed_ts = api_client.send_frame(
+                        frame, video_timestamp=video_ts
+                    )
+
+                    # Отображение видео
+                    if processed_frame is not None:
+                        img_rgb = cv2.cvtColor(processed_frame, cv2.COLOR_BGR2RGB)
+                    else:
+                        img_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+                    # Изменение размера для отображения
+                    height, width = img_rgb.shape[:2]
+                    new_width = 320
+                    new_height = int(height * new_width / width)
+                    img_resized = cv2.resize(img_rgb, (new_width, new_height))
+
+                    video_placeholder.image(img_resized, channels="RGB", width="stretch")
+
+                    # Обновление метрик
+                    if results:
+                        result = results[0]  # Первое обнаруженное лицо
+
+                        # Эмоция
+                        emotion = result.get("emotion", "unknown")
+                        confidence = result.get("confidence", 0)
+                        emotion_metric.info(
+                            f"**{emotion}** "
+                            f"(уверенность: {confidence:.2f})"
+                        )
+                        st.session_state.emotion_history.append(emotion)
+
+                        # Вовлечённость
+                        engagement = result.get("engagement")
+                        engagement_score = 0
+                        engagement_level = ""
+                        if engagement:
+                            level = engagement.get("level", "—")
+                            score = engagement.get("score", 0)
+                            trend = engagement.get("trend", "stable")
+                            trend_icon = {"rising": "↑", "falling": "↓", "stable": "→"}.get(trend, "")
+                            engagement_metric.success(
+                                f"**Вовлечённость:** {level} ({score:.0%}) {trend_icon}"
+                            )
+                            engagement_score = score
+                            engagement_level = level
+
+                            # Сохранение для графика вовлечённости по видео
+                            if echoed_ts is not None:
+                                st.session_state.video_timestamps.append(echoed_ts)
+                                st.session_state.engagement_history.append(score)
+                        else:
+                            engagement_metric.empty()
+
+                        # Положение головы
+                        pitch_val = yaw_val = roll_val = None
+                        if result.get("head_pose"):
+                            hp = result["head_pose"]
+                            pitch_val = hp.get("pitch", 0)
+                            yaw_val = hp.get("yaw", 0)
+                            roll_val = hp.get("roll", 0)
+                            pitch_metric.metric("Pitch", f"{pitch_val:.1f}°")
+                            yaw_metric.metric("Yaw", f"{yaw_val:.1f}°")
+                            roll_metric.metric("Roll", f"{roll_val:.1f}°")
+
+                            st.session_state.head_pose_history["pitch"].append(pitch_val)
+                            st.session_state.head_pose_history["yaw"].append(yaw_val)
+                            st.session_state.head_pose_history["roll"].append(roll_val)
+                        else:
+                            pitch_metric.metric("Pitch", "—")
+                            yaw_metric.metric("Yaw", "—")
+                            roll_metric.metric("Roll", "—")
+
+                        # EAR
+                        ear_val = None
+                        ear = result.get("ear")
+                        if ear and ear.get("avg_ear") is not None:
+                            ear_val = ear["avg_ear"]
+                            st.session_state.ear_history.append(ear_val)
+
+                        # Сохранение строки для CSV-экспорта
+                        st.session_state.export_data.append({
+                            "video_time": echoed_ts if echoed_ts is not None else current_timestamp,
+                            "emotion": emotion,
+                            "confidence": confidence,
+                            "engagement_score": engagement_score,
+                            "engagement_level": engagement_level,
+                            "ear": ear_val,
+                            "pitch": pitch_val,
+                            "yaw": yaw_val,
+                            "roll": roll_val,
+                        })
+                    else:
+                        emotion_metric.warning("Лицо не обнаружено")
+                        engagement_metric.empty()
+                        pitch_metric.metric("Pitch", "—")
+                        yaw_metric.metric("Yaw", "—")
+                        roll_metric.metric("Roll", "—")
+
+            except Exception as e:
+                st.error(f"Ошибка: {e}")
+            finally:
+                cap.release()
+                # WebSocket НЕ отключается при rerun Streamlit — соединение
+                # сохраняется в session_state для переиспользования
+                # Отключение только при явной остановке webcam
+                if not st.session_state.get("webcam_running", True):
+                    api_client.disconnect()
+                video_placeholder.empty()
+
+
+def main():
+    """Основная функция"""
+    display_header()
+    create_main_section()
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except Exception as e:
+        st.error(f"Ошибка приложения: {str(e)}")
