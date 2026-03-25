@@ -73,29 +73,37 @@ class EngagementAPIClient:
             logger.warning(f"Reconnect failed: {e}")
             return False
 
-    def send_frame(self, frame: np.ndarray) -> tuple[np.ndarray | None, list[dict]]:
+    def send_frame(
+        self, frame: np.ndarray, video_timestamp: float | None = None
+    ) -> tuple[np.ndarray | None, list[dict], float | None]:
         """
         Отправка кадра на обработку и получение результатов.
 
         Args:
             frame: Кадр в формате BGR (numpy array от OpenCV)
+            video_timestamp: Временная метка видео в секундах (опционально)
 
         Returns:
-            Кортеж (обработанный кадр BGR или None, список результатов анализа)
+            Кортеж (обработанный кадр BGR или None, список результатов анализа, эхо временной метки)
         """
         if not self.is_connected:
             if not self._reconnect():
-                return None, []
+                return None, [], None
 
         # Кодирование кадра в base64 JPEG
         _, buffer = cv2.imencode(".jpg", frame)
         image_b64 = base64.b64encode(buffer).decode("utf-8")
 
+        # Формирование payload
+        payload = {"image": image_b64}
+        if video_timestamp is not None:
+            payload["video_timestamp"] = video_timestamp
+
         # Цикл retry: первая попытка + одна попытка после реконнекта
         response = None
         for attempt in range(2):
             try:
-                self._ws.send(json.dumps({"image": image_b64}))
+                self._ws.send(json.dumps(payload))
                 response_raw = self._ws.recv()
                 response = json.loads(response_raw)
                 break
@@ -103,17 +111,17 @@ class EngagementAPIClient:
                 if attempt == 0:
                     logger.warning(f"WebSocket send/recv error: {e}")
                     if not self._reconnect():
-                        return None, []
+                        return None, [], None
                 else:
-                    return None, []
+                    return None, [], None
 
         if response is None:
-            return None, []
+            return None, [], None
 
         # Обработка ошибки от сервера
         if "error" in response:
             logger.warning(f"Server error: {response['error']}")
-            return None, []
+            return None, [], None
 
         # Декодирование обработанного изображения
         processed_frame = None
@@ -126,7 +134,8 @@ class EngagementAPIClient:
                 logger.warning(f"Failed to decode processed image: {e}")
 
         results = response.get("results", [])
-        return processed_frame, results
+        echoed_timestamp = response.get("video_timestamp")
+        return processed_frame, results, echoed_timestamp
 
     def check_health(self) -> bool:
         """
