@@ -120,7 +120,11 @@ if "timestamps" not in st.session_state:
 if "frame_count" not in st.session_state:
     st.session_state.frame_count = 0
 
+if "chart_update_count" not in st.session_state:
+    st.session_state.chart_update_count = 0
+
 HEALTH_CHECK_INTERVAL = 10.0  # Интервал проверки доступности бэкенда (секунды)
+CHART_UPDATE_INTERVAL = 15    # Интервал обновления графиков (в кадрах)
 
 
 def check_backend_health() -> bool:
@@ -270,6 +274,7 @@ def create_webcam_section():
             if not st.session_state.webcam_running:
                 if st.button("▶️ Запустить", width="stretch"):
                     st.session_state.webcam_running = True
+                    st.session_state.needs_reset = True
                     st.rerun()
 
         with col2:
@@ -278,29 +283,48 @@ def create_webcam_section():
                     st.session_state.webcam_running = False
                     st.rerun()
 
-        # Текущая эмоция и метрики
+        # Текущие метрики
         st.markdown("---")
         st.markdown("#### 📊 Текущие показатели")
 
-        emotion_metric = st.empty()
-        engagement_metric = st.empty()
-
-        # Метрики положения головы в реальном времени
-        metrics_container = st.container()
-        with metrics_container:
-            pitch_metric = st.empty()
-            yaw_metric = st.empty()
-            roll_metric = st.empty()
+        # Частные engagement по компонентам (в строку, рамочки)
+        comp_cols = st.columns(3)
+        comp_eye_metric = comp_cols[0].empty()
+        comp_hpe_metric = comp_cols[1].empty()
+        comp_emo_metric = comp_cols[2].empty()
+        engagement_metric = st.empty()              # Общий engagement
+        emotion_metric = st.empty()                 # Эмоция
+        head_pose_metric = st.empty()               # Углы HPE в одну строку
 
     with right_col:
         st.markdown("#### 📈 Аналитика в реальном времени")
 
-        # Графики
-        chart_container = st.container()
-        with chart_container:
-            pie_placeholder = st.empty()
-            pose_placeholder = st.empty()
-            ear_placeholder = st.empty()
+        # Placeholder'ы для графиков (обновляются in-place, без мерцания)
+        pie_placeholder = st.empty()
+        pose_placeholder = st.empty()
+        ear_placeholder = st.empty()
+
+        # Отрисовка последних данных (сохраняет графики после остановки камеры)
+        if not st.session_state.webcam_running:
+            pie_fig = create_emotion_pie_chart(st.session_state.emotion_history)
+            if pie_fig:
+                pie_placeholder.plotly_chart(pie_fig, key="pie_stopped")
+
+            pose_fig = create_head_pose_chart(
+                st.session_state.timestamps,
+                st.session_state.head_pose_history["pitch"],
+                st.session_state.head_pose_history["yaw"],
+                st.session_state.head_pose_history["roll"],
+            )
+            if pose_fig:
+                pose_placeholder.plotly_chart(pose_fig, key="pose_stopped")
+
+            ear_fig = create_ear_chart(
+                st.session_state.timestamps,
+                st.session_state.ear_history,
+            )
+            if ear_fig:
+                ear_placeholder.plotly_chart(ear_fig, key="ear_stopped")
 
     # Запуск веб-камеры
     if st.session_state.webcam_running:
@@ -326,6 +350,18 @@ def create_webcam_section():
                     return
 
             try:
+                # Очистка истории графиков при новом запуске
+                if st.session_state.get("needs_reset", False):
+                    st.session_state.emotion_history.clear()
+                    st.session_state.head_pose_history["pitch"].clear()
+                    st.session_state.head_pose_history["yaw"].clear()
+                    st.session_state.head_pose_history["roll"].clear()
+                    st.session_state.ear_history.clear()
+                    st.session_state.timestamps.clear()
+                    st.session_state.frame_count = 0
+                    st.session_state.chart_update_count = 0
+                    st.session_state.needs_reset = False
+
                 start_time = current_time()
 
                 while st.session_state.webcam_running:
@@ -358,64 +394,102 @@ def create_webcam_section():
                     if results:
                         result = results[0]  # Первое обнаруженное лицо
 
+                        # Частные engagement по компонентам (attention_state)
+                        engagement = result.get("engagement")
+                        ear = result.get("ear")
+                        hp = result.get("head_pose")
+
+                        if engagement:
+                            components = engagement.get("components") or {}
+
+                            # Eye (EAR) компонент
+                            if ear and ear.get("attention_state"):
+                                eye_s = components.get("eye_score", 0)
+                                comp_eye_metric.info(
+                                    f"**Eye:** {ear['attention_state']} ({eye_s:.2f})"
+                                )
+                            else:
+                                comp_eye_metric.empty()
+
+                            # HPE компонент
+                            if hp and hp.get("attention_state"):
+                                hp_s = components.get("head_pose_score", 0)
+                                comp_hpe_metric.info(
+                                    f"**HPE:** {hp['attention_state']} ({hp_s:.2f})"
+                                )
+                            else:
+                                comp_hpe_metric.empty()
+
+                            # Emotion компонент
+                            emo_s = components.get("emotion_score", 0)
+                            if emo_s:
+                                comp_emo_metric.info(f"**Emo:** {emo_s:.2f}")
+                            else:
+                                comp_emo_metric.empty()
+
+                            # Общий engagement
+                            level = engagement.get("level", "—")
+                            score = engagement.get("score", 0)
+                            trend = engagement.get("trend", "stable")
+                            trend_icon = {
+                                "rising": "↑", "falling": "↓", "stable": "→"
+                            }.get(trend, "")
+                            engagement_metric.success(
+                                f"**Вовлечённость:** {level} ({score:.0%}) {trend_icon}"
+                            )
+                        else:
+                            comp_eye_metric.empty()
+                            comp_hpe_metric.empty()
+                            comp_emo_metric.empty()
+                            engagement_metric.empty()
+
                         # Эмоция
                         emotion_metric.info(
                             f"**{result.get('emotion', '—')}** "
                             f"(уверенность: {result.get('confidence', 0):.2f})"
                         )
-                        st.session_state.emotion_history.append(result.get("emotion", "unknown"))
+                        st.session_state.emotion_history.append(
+                            result.get("emotion", "unknown")
+                        )
 
-                        # Вовлечённость
-                        engagement = result.get("engagement")
-                        if engagement:
-                            level = engagement.get("level", "—")
-                            score = engagement.get("score", 0)
-                            trend = engagement.get("trend", "stable")
-                            trend_icon = {"rising": "↑", "falling": "↓", "stable": "→"}.get(trend, "")
-                            engagement_metric.success(
-                                f"**Вовлечённость:** {level} ({score:.0%}) {trend_icon}"
+                        # Углы HPE в одну строку
+                        if hp:
+                            pitch = hp.get("pitch", 0)
+                            yaw = hp.get("yaw", 0)
+                            roll = hp.get("roll", 0)
+                            head_pose_metric.caption(
+                                f"P: {pitch:.1f}° · Y: {yaw:.1f}° · R: {roll:.1f}°"
                             )
+                            st.session_state.head_pose_history["pitch"].append(pitch)
+                            st.session_state.head_pose_history["yaw"].append(yaw)
+                            st.session_state.head_pose_history["roll"].append(roll)
                         else:
-                            engagement_metric.empty()
+                            head_pose_metric.caption("P: — · Y: — · R: —")
 
-                        # Положение головы
-                        if result.get("head_pose"):
-                            hp = result["head_pose"]
-                            pitch_metric.metric("Pitch", f"{hp.get('pitch', 0):.1f}°")
-                            yaw_metric.metric("Yaw", f"{hp.get('yaw', 0):.1f}°")
-                            roll_metric.metric("Roll", f"{hp.get('roll', 0):.1f}°")
-
-                            st.session_state.head_pose_history["pitch"].append(hp.get("pitch", 0))
-                            st.session_state.head_pose_history["yaw"].append(hp.get("yaw", 0))
-                            st.session_state.head_pose_history["roll"].append(hp.get("roll", 0))
-                        else:
-                            pitch_metric.metric("Pitch", "—")
-                            yaw_metric.metric("Yaw", "—")
-                            roll_metric.metric("Roll", "—")
-
-                        # EAR
-                        ear = result.get("ear")
+                        # EAR (история для графика)
                         if ear and ear.get("avg_ear") is not None:
                             st.session_state.ear_history.append(ear["avg_ear"])
                     else:
-                        emotion_metric.warning("Лицо не обнаружено")
+                        comp_eye_metric.empty()
+                        comp_hpe_metric.empty()
+                        comp_emo_metric.empty()
                         engagement_metric.empty()
-                        pitch_metric.metric("Pitch", "—")
-                        yaw_metric.metric("Yaw", "—")
-                        roll_metric.metric("Roll", "—")
+                        emotion_metric.warning("Лицо не обнаружено")
+                        head_pose_metric.caption("P: — · Y: — · R: —")
 
-                    # Обновление графиков (каждый 5-й кадр)
-                    if st.session_state.frame_count % 5 == 0:
-                        # Круговая диаграмма эмоций
-                        pie_fig = create_emotion_pie_chart(st.session_state.emotion_history)
+                    # Обновление графиков с фиксированной частотой
+                    if st.session_state.frame_count % CHART_UPDATE_INTERVAL == 0:
+                        n = st.session_state.chart_update_count
+                        st.session_state.chart_update_count = n + 1
+
+                        pie_fig = create_emotion_pie_chart(
+                            st.session_state.emotion_history
+                        )
                         if pie_fig:
                             pie_placeholder.plotly_chart(
-                                pie_fig,
-                                width="stretch",
-                                key=f"pie_{st.session_state.frame_count}",
+                                pie_fig, key=f"pie_{n}"
                             )
 
-                        # График положения головы
                         pose_fig = create_head_pose_chart(
                             st.session_state.timestamps,
                             st.session_state.head_pose_history["pitch"],
@@ -424,21 +498,16 @@ def create_webcam_section():
                         )
                         if pose_fig:
                             pose_placeholder.plotly_chart(
-                                pose_fig,
-                                width="stretch",
-                                key=f"pose_{st.session_state.frame_count}",
+                                pose_fig, key=f"pose_{n}"
                             )
 
-                        # График EAR
                         ear_fig = create_ear_chart(
                             st.session_state.timestamps,
                             st.session_state.ear_history,
                         )
                         if ear_fig:
                             ear_placeholder.plotly_chart(
-                                ear_fig,
-                                width="stretch",
-                                key=f"ear_{st.session_state.frame_count}",
+                                ear_fig, key=f"ear_{n}"
                             )
 
             except Exception as e:
