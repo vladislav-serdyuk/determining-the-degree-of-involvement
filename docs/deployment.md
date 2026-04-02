@@ -5,12 +5,12 @@
 Запускает Redis и бэкенд одной командой:
 
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 
 Остановка:
 ```bash
-docker-compose down
+docker compose down
 ```
 
 ---
@@ -19,8 +19,8 @@ docker-compose down
 
 ### Требования
 
-- **Python**: 3.10+
-- **Redis**: 6.0+
+- **Python**: 3.12+
+- **Redis**: 7.0+
 
 ### Установка зависимостей
 
@@ -52,7 +52,7 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000
 |------------------------|----------------------------------------------|----------------------------------------|
 | `REDIS_HOST`           | localhost                                    | Хост Redis                             |
 | `REDIS_PORT`           | 6379                                         | Порт Redis                             |
-| `REDIS_PASSWORD`       | password                                     | Пароль Redis                           |
+| `REDIS_PASSWORD`       | (пустая строка)                              | Пароль Redis                           |
 | `CORS_ALLOWED_ORIGINS` | http://localhost:8501,http://localhost:63342 | Разрешённые CORS-источники             |
 | `EMOTION_DEVICE`       | auto                                         | Устройство для PyTorch (cpu/cuda/auto) |
 

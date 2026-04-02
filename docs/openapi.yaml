@@ -1,7 +1,13 @@
 openapi: 3.1.0
 info:
   title: API распознавания эмоций
-  description: REST API для детекции лиц и распознавания эмоций в реальном времени
+  description: |
+    REST API для детекции лиц и распознавания эмоций в реальном времени
+    
+    ## WebSocket эндпоинты
+    OpenAPI не поддерживает WebSocket нативно. WebSocket эндпоинты описаны в [api-format.md](api-format.md):
+    - `/ws/rooms/{room_id}/stream` - отправка видеопотока и получение результатов анализа
+    - `/ws/rooms/{room_id}/clients/{client_id}/output_stream` - просмотр потока другого клиента
   version: 1.0.0
 servers:
 - url: http://localhost:8000

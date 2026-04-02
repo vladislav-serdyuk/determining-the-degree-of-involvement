@@ -102,9 +102,9 @@ client.connect(room_id="new-room", name="user")
 # results[0] - первое обнаруженное лицо
 result = results[0]
 
-emotion = result["emotion"]           # "happy", "neutral", "sad", ...
+emotion = result["emotion"]           # "Happy", "Neutral", "Sad", ...
 confidence = result["confidence"]     # 0.0 - 1.0
-bbox = result["bbox"]                 # (x, y, w, h)
+bbox = result["bbox"]                 # (x1, y1, x2, y2)
 
 # EAR (Eye Aspect Ratio)
 ear = result.get("ear", {})
@@ -142,6 +142,20 @@ processed_frame, results = client.send_frame(frame)
 if not results:  # пустой результат
     # Либо лицо не найдено, либо ошибка
     pass
+```
+
+## Обработка разрывов соединения
+
+```python
+# При разрыве соединения клиент выполняет:
+# 1. Автоматический reconnect (1 попытка)
+# 2. При неудаче возвращает (None, [])
+
+processed_frame, results = client.send_frame(frame)
+if processed_frame is None and not results:
+    # Соединение разорвано, переподключение не удалось
+    # Необходимо повторно вызвать client.connect()
+    client.connect(room_id="my-room", name="user")
 ```
 
 ## Пример с веб-камерой

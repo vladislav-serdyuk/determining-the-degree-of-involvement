@@ -33,7 +33,7 @@
 
 ## Версии зависимостей
 
-См. `requirements.txt` в директориях `backend/` и `frontend/`.
+См. `pyproject.toml` в директории `backend/`.
 
 ## Контакты
 

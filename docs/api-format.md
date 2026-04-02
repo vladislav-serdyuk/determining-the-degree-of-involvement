@@ -65,9 +65,9 @@ ws.send(json.dumps(data))
     "image": "base64_encoded_processed_jpeg",  # Изображение с наложениями
     "results": [
         {
-            "emotion": "happy",
+            "emotion": "Happy",
             "confidence": 0.85,
-            "bbox": [x, y, width, height],
+            "bbox": [x1, y1, x2, y2],
             "ear": {
                 "left_ear": 0.28,
                 "right_ear": 0.27,
@@ -87,8 +87,8 @@ ws.send(json.dumps(data))
                 "attention_state": "Highly Attentive"
             },
             "engagement": {
-                "score": 0.75,
-                "score_raw": 0.82,
+                "score": 0.75,      # Сглаженный (адаптивное сглаживание)
+                "score_raw": 0.82,  # Сырой (текущий кадр)
                 "level": "High",
                 "trend": "stable",
                 "components": {
@@ -154,9 +154,9 @@ class EngagementResult(BaseModel):
     frame_count: int
 
 class FaceAnalysisResult(BaseModel):
-    emotion: str
+    emotion: str  # Happy, Neutral, Sad и т.д.
     confidence: float
-    bbox: tuple[int, int, int, int]  # (x, y, w, h)
+    bbox: tuple[int, int, int, int]  # (x1, y1, x2, y2)
     ear: EARResult | None
     head_pose: HeadPoseResult | None
     engagement: EngagementResult | None
