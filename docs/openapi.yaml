@@ -1,0 +1,233 @@
+openapi: 3.1.0
+info:
+  title: API распознавания эмоций
+  description: |
+    REST API для детекции лиц и распознавания эмоций в реальном времени
+    
+    ## WebSocket эндпоинты
+    OpenAPI не поддерживает WebSocket нативно. WebSocket эндпоинты описаны в [api-format.md](api-format.md):
+    - `/ws/rooms/{room_id}/stream` - отправка видеопотока и получение результатов анализа
+    - `/ws/rooms/{room_id}/clients/{client_id}/output_stream` - просмотр потока другого клиента
+  version: 1.0.0
+servers:
+- url: http://localhost:8000
+  description: Локальный сервер
+paths:
+  /health:
+    get:
+      summary: Health Check
+      description: Проверка работоспособности сервиса
+      operationId: health_check
+      tags:
+      - System
+      responses:
+        '200':
+          description: Сервис работает
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: healthy
+                  version:
+                    type: string
+                    example: 1.0.0
+  /rooms:
+    get:
+      summary: Get Rooms
+      description: Получение списка всех активных комнат
+      operationId: get_rooms
+      tags:
+      - Rooms
+      responses:
+        '200':
+          description: Список комнат
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+  /rooms/{room_id}/clients:
+    get:
+      summary: Get Clients
+      description: Получение списка клиентов в комнате
+      operationId: get_clients
+      tags:
+      - Rooms
+      parameters:
+      - name: room_id
+        in: path
+        required: true
+        schema:
+          type: string
+          maxLength: 40
+      responses:
+        '200':
+          description: Список клиентов
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ClientInfo'
+        '404':
+          description: Комната не найдена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoomNotFoundResponse'
+components:
+  schemas:
+    ClientInfo:
+      type: object
+      properties:
+        name:
+          type: string
+        id_:
+          type: string
+          format: uuid
+    RoomNotFoundResponse:
+      type: object
+      properties:
+        detail:
+          type: string
+    FrameRequest:
+      type: object
+      properties:
+        image:
+          type: string
+          description: base64-encoded JPEG
+    FrameResponse:
+      type: object
+      properties:
+        image:
+          type: string
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/FaceAnalysisResult'
+    OutputStreamFrameResponse:
+      type: object
+      properties:
+        image_src:
+          type: string
+        image:
+          type: string
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/FaceAnalysisResult'
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+    FaceAnalysisResult:
+      type: object
+      properties:
+        emotion:
+          type: string
+        confidence:
+          type: number
+        bbox:
+          type: array
+          items:
+            type: integer
+        ear:
+          $ref: '#/components/schemas/EARResult'
+        head_pose:
+          $ref: '#/components/schemas/HeadPoseResult'
+        engagement:
+          $ref: '#/components/schemas/EngagementResult'
+    EARResult:
+      type: object
+      properties:
+        left_ear:
+          type: number
+        right_ear:
+          type: number
+        avg_ear:
+          type: number
+        eyes_open:
+          type: boolean
+        blink_count:
+          type: integer
+        is_blinking:
+          type: boolean
+        ear_history:
+          type: array
+          items:
+            type: number
+          nullable: true
+        attention_state:
+          type: string
+          enum:
+          - Alert
+          - Normal
+          - Drowsy
+          - Very Drowsy
+    HeadPoseResult:
+      type: object
+      properties:
+        pitch:
+          type: number
+        yaw:
+          type: number
+        roll:
+          type: number
+        rotation_vec:
+          type: array
+          items:
+            type: number
+        translation_vec:
+          type: array
+          items:
+            type: number
+        attention_state:
+          type: string
+          enum:
+          - Highly Attentive
+          - Attentive
+          - Distracted
+          - Very Distracted
+    EngagementComponents:
+      type: object
+      properties:
+        emotion_score:
+          type: number
+        eye_score:
+          type: number
+        head_pose_score:
+          type: number
+    EngagementResult:
+      type: object
+      properties:
+        score:
+          type: number
+        score_raw:
+          type: number
+        level:
+          type: string
+          enum:
+          - High
+          - Medium
+          - Low
+          - Very Low
+        trend:
+          type: string
+          enum:
+          - rising
+          - falling
+          - stable
+        components:
+          $ref: '#/components/schemas/EngagementComponents'
+        frame_count:
+          type: integer
+tags:
+- name: System
+  description: Системные эндпоинты
+- name: Rooms
+  description: Управление комнатами
