@@ -102,7 +102,7 @@ client.connect(room_id="new-room", name="user")
 # results[0] - первое обнаруженное лицо
 result = results[0]
 
-emotion = result["emotion"]           # "Happy", "Neutral", "Sad", ...
+emotion = result["emotion"]           # "Happiness", "Neutral", "Sadness", ...
 confidence = result["confidence"]     # 0.0 - 1.0
 bbox = result["bbox"]                 # (x1, y1, x2, y2)
 
