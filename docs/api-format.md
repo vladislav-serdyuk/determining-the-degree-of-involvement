@@ -65,7 +65,7 @@ ws.send(json.dumps(data))
     "image": "base64_encoded_processed_jpeg",  # Изображение с наложениями
     "results": [
         {
-            "emotion": "Happy",
+            "emotion": "Happiness",
             "confidence": 0.85,
             "bbox": [x1, y1, x2, y2],
             "ear": {
@@ -154,7 +154,7 @@ class EngagementResult(BaseModel):
     frame_count: int
 
 class FaceAnalysisResult(BaseModel):
-    emotion: str  # Happy, Neutral, Sad и т.д.
+    emotion: str  # Happiness, Neutral, Sadness и т.д.
     confidence: float
     bbox: tuple[int, int, int, int]  # (x1, y1, x2, y2)
     ear: EARResult | None
