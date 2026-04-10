@@ -13,6 +13,7 @@ services:
       retries: 3
 
   engagement-detector-backend:
+    build: backend
     image: ghcr.io/${GHCR_REPOSITORY_OWNER:-funnyvalentain}/engagement-detection-backend:v${APP_VERSION}
     ports:
       - "8000:8000"
@@ -68,6 +69,7 @@ services:
               capabilities: [ gpu ]
 
   engagement-detector-frontend:
+    build: frontend
     image: ghcr.io/${GHCR_REPOSITORY_OWNER:-funnyvalentain}/engagement-detection-frontend:v${APP_VERSION}
     ports:
       - "8501:8501"
