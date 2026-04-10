@@ -23,15 +23,14 @@ jobs:
     
     - name: Install system libraries
       run: |
-        apt-get update && apt-get install -y --no-install-recommends \
+        sudo apt-get update && sudo apt-get install -y --no-install-recommends \
         libglib2.0-0 \
         libsm6 \
         libxext6 \
         libxrender-dev \
         libgomp1 \
         ffmpeg \
-        curl \
-        && rm -rf /var/lib/apt/lists/*
+        curl
     
     - name: Install backend dependencies
       run: |
