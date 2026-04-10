@@ -98,7 +98,7 @@ jobs:
       id: meta-backend
       uses: docker/metadata-action@v5
       with:
-        images: ghcr.io/${{ toLower(github.repository_owner) }}/engagement-detection-backend
+        images: ghcr.io/${{ to_lower(github.repository_owner) }}/engagement-detection-backend
         tags: |
           type=ref,event=branch
           type=ref,event=pr
@@ -113,7 +113,7 @@ jobs:
       id: meta-frontend
       uses: docker/metadata-action@v5
       with:
-        images: ghcr.io/${{ toLower(github.repository_owner) }}/engagement-detection-frontend
+        images: ghcr.io/${{ to_lower(github.repository_owner) }}/engagement-detection-frontend
         tags: |
           type=ref,event=branch
           type=ref,event=pr
