@@ -14,7 +14,7 @@ services:
 
   engagement-detector-backend:
     build: backend
-    image: ghcr.io/${GHCR_REPOSITORY_OWNER:-funnyvalentain}/engagement-detection-backend:v${APP_VERSION}
+    image: ghcr.io/${GHCR_REPOSITORY_OWNER:-funnyvalentain}/engagement-detection-backend:${GHCR_BACKEND_TAG:-latest}
     ports:
       - "8000:8000"
     env_file:
@@ -70,7 +70,7 @@ services:
 
   engagement-detector-frontend:
     build: frontend
-    image: ghcr.io/${GHCR_REPOSITORY_OWNER:-funnyvalentain}/engagement-detection-frontend:v${APP_VERSION}
+    image: ghcr.io/${GHCR_REPOSITORY_OWNER:-funnyvalentain}/engagement-detection-frontend:${GHCR_FRONTEND_TAG:-latest}
     ports:
       - "8501:8501"
     environment:
