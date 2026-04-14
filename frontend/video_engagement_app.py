@@ -141,6 +141,14 @@ if "export_data" not in st.session_state:
 if "camera" not in st.session_state:
     st.session_state.camera = None
 
+# Снимок состояния плеера и wall-clock момент его получения
+# для интерполяции video_timestamp между редкими rerun-ами от плеера.
+if "player_snapshot" not in st.session_state:
+    st.session_state.player_snapshot = None
+
+if "player_snapshot_wall" not in st.session_state:
+    st.session_state.player_snapshot_wall = 0.0
+
 
 HEALTH_CHECK_INTERVAL = 10.0  # Интервал проверки доступности бэкенда (секунды)
 CHART_UPDATE_INTERVAL = 15    # Интервал обновления графиков (в кадрах)
@@ -538,13 +546,23 @@ def create_main_section():
                 current_timestamp = current_time() - start_time
                 st.session_state.timestamps.append(current_timestamp)
 
-                # Чтение актуального состояния плеера из session_state на каждой итерации.
-                # Компонент с key="main_player" обновляет значение при каждом timeupdate,
-                # что вызывает rerun, тогда цикл стартует заново и видит свежий currentTime.
+                # Интерполяция video_timestamp по wall-clock между редкими rerun-ами плеера.
+                # Плеер отправляет snapshot только на play/pause/seeked и раз в 5 сек (для снижения частоты rerun). 
+                # Между снимками линейно дорисовывается currentTime по прошедшему реальному времени, если видео играет.
                 player_state = st.session_state.get("main_player")
+                if player_state and player_state != st.session_state.player_snapshot:
+                    # Новый снимок от плеера — зафиксировать момент получения
+                    st.session_state.player_snapshot = player_state
+                    st.session_state.player_snapshot_wall = current_time()
+
                 video_ts = None
-                if player_state and player_state.get("currentTime") is not None:
-                    video_ts = player_state.get("currentTime")
+                snap = st.session_state.player_snapshot
+                if snap and snap.get("currentTime") is not None:
+                    base_ts = snap["currentTime"]
+                    if snap.get("playing"):
+                        video_ts = base_ts + (current_time() - st.session_state.player_snapshot_wall)
+                    else:
+                        video_ts = base_ts
 
                 # Отправка кадра на бэкенд с временной меткой видео
                 processed_frame, results, echoed_ts = api_client.send_frame(
