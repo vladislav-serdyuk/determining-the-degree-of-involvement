@@ -449,15 +449,20 @@ def create_main_section():
         st.markdown("---")
         st.markdown("#### 📊 Показатели")
 
-        emotion_metric = st.empty()
-        engagement_metric = st.empty()
+        # Частные engagement по компонентам (в строку)
+        comp_cols = st.columns(3)
+        comp_eye_metric = comp_cols[0].empty()
+        comp_hpe_metric = comp_cols[1].empty()
+        comp_emo_metric = comp_cols[2].empty()
 
-        # Метрики положения головы
-        metrics_container = st.container()
-        with metrics_container:
-            pitch_metric = st.empty()
-            yaw_metric = st.empty()
-            roll_metric = st.empty()
+        engagement_metric = st.empty()
+        emotion_metric = st.empty()
+
+        # Метрики положения головы (в строку)
+        pose_cols = st.columns(3)
+        pitch_metric = pose_cols[0].empty()
+        yaw_metric = pose_cols[1].empty()
+        roll_metric = pose_cols[2].empty()
 
     # Разделитель перед графиками
     st.markdown("---")
@@ -599,9 +604,39 @@ def create_main_section():
 
                     # Вовлечённость
                     engagement = result.get("engagement")
+                    ear = result.get("ear")
+                    hp = result.get("head_pose")
                     engagement_score = 0
                     engagement_level = ""
                     if engagement:
+                        components = engagement.get("components") or {}
+
+                        # Eye (EAR) компонент
+                        if ear and ear.get("attention_state"):
+                            eye_s = components.get("eye_score", 0)
+                            comp_eye_metric.info(
+                                f"**Eye:** {ear['attention_state']} ({eye_s:.2f})"
+                            )
+                        else:
+                            comp_eye_metric.empty()
+
+                        # HPE компонент
+                        if hp and hp.get("attention_state"):
+                            hp_s = components.get("head_pose_score", 0)
+                            comp_hpe_metric.info(
+                                f"**HPE:** {hp['attention_state']} ({hp_s:.2f})"
+                            )
+                        else:
+                            comp_hpe_metric.empty()
+
+                        # Emotion компонент
+                        emo_s = components.get("emotion_score", 0)
+                        if emo_s:
+                            comp_emo_metric.info(f"**Emo:** {emo_s:.2f}")
+                        else:
+                            comp_emo_metric.empty()
+
+                        # Общий engagement
                         level = engagement.get("level", "—")
                         score = engagement.get("score", 0)
                         trend = engagement.get("trend", "stable")
@@ -617,6 +652,9 @@ def create_main_section():
                             st.session_state.video_timestamps.append(echoed_ts)
                             st.session_state.engagement_history.append(score)
                     else:
+                        comp_eye_metric.empty()
+                        comp_hpe_metric.empty()
+                        comp_emo_metric.empty()
                         engagement_metric.empty()
 
                     # Положение головы
@@ -658,6 +696,9 @@ def create_main_section():
                         "roll": roll_val,
                     })
                 else:
+                    comp_eye_metric.empty()
+                    comp_hpe_metric.empty()
+                    comp_emo_metric.empty()
                     emotion_metric.warning("Лицо не обнаружено")
                     engagement_metric.empty()
                     pitch_metric.metric("Pitch", "—")
