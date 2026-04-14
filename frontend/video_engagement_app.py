@@ -546,9 +546,10 @@ def create_main_section():
                 current_timestamp = current_time() - start_time
                 st.session_state.timestamps.append(current_timestamp)
 
-                # Интерполяция video_timestamp по wall-clock между редкими rerun-ами плеера.
-                # Плеер отправляет snapshot только на play/pause/seeked и раз в 5 сек (для снижения частоты rerun). 
-                # Между снимками линейно дорисовывается currentTime по прошедшему реальному времени, если видео играет.
+                # Интерполяция video_timestamp по wall-clock.
+                # Плеер отправляет snapshot только на play/pause/seeked/loadedmetadata,
+                # чтобы не триггерить rerun Streamlit чаще необходимого (rerun рвёт камеру и WS).
+                # Между снимками currentTime дорисовывается по прошедшему реальному времени.
                 player_state = st.session_state.get("main_player")
                 if player_state and player_state != st.session_state.player_snapshot:
                     # Новый снимок от плеера — зафиксировать момент получения

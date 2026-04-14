@@ -73,10 +73,11 @@
             setFrameHeight();
         }
 
-        // Важно: sendState НЕ вешается на timeupdate — он срабатывает ~4 раза в секунду,
-        // каждый вызов триггерит rerun Streamlit, и интерфейс начинает задыхаться.
-        // Вместо этого отправляем состояние только на значимых событиях + раз в N секунд.
-        // Интерполяция currentTime между отправками делается на стороне Python по wall-clock.
+        // sendState НЕ вешается на timeupdate (~4 раза/сек) и не запускается по таймеру,
+        // потому что каждый вызов setComponentValue триггерит rerun Streamlit, что прерывает
+        // захват веб-камеры и вызывает моргание canvas. Snapshot отправляется только на
+        // явных событиях (play/pause/seeked) — между ними Python интерполирует currentTime
+        // по wall-clock. Точность достаточная, дрейф корректируется на любом seek.
         video.addEventListener("play", sendState);
         video.addEventListener("pause", sendState);
         video.addEventListener("seeked", sendState);
@@ -84,10 +85,6 @@
             setFrameHeight();
             sendState();
         });
-        // Периодическая ресинхронизация (каждые 5 секунд — редко, но достаточно)
-        setInterval(() => {
-            if (!video.paused) sendState();
-        }, 5000);
 
         window.addEventListener("message", (event) => {
             const data = event.data;
