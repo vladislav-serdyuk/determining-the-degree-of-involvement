@@ -6,8 +6,12 @@ import cv2
 import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
+from dotenv import load_dotenv
 
 from api_client import EngagementAPIClient
+
+# Загрузка переменных из frontend/.env (системные env в приоритете)
+load_dotenv()
 
 APP_TITLE = "Распознавание эмоций в реальном времени"
 APP_ICON = "🎭"
