@@ -311,23 +311,33 @@ def create_engagement_timeline(video_timestamps, engagement_history):
 # ================================================
 
 
-@st.fragment
+@st.fragment(run_every=0.5)
 def render_player_fragment(url: str) -> None:
     """
     Изолированный рендер видеоплеера.
 
-    Компонент пушит setComponentValue на play/pause/seeked/loadedmetadata,
-    что триггерит rerun. Внутри @st.fragment rerun ограничен этим блоком,
-    основной скрипт не пересобирается - веб-камера и WS не пересоздаются
-    при управлении плеером.
+    Компонент пушит setComponentValue только на play/pause/seeked/loadedmetadata,
+    поэтому currentTime во фрагменте между событиями застывает. run_every=0.5
+    перезапускает фрагмент дважды в секунду - caption дорисовывается wall-clock
+    интерполяцией так же, как video_ts в capture-фрагменте.
     """
     player_state = video_player(url, height=360, key="main_player")
-    if player_state:
-        duration = player_state.get("duration", 0)
-        current_t = player_state.get("currentTime", 0)
-        playing = player_state.get("playing", False)
-        status_text = "▶️ Воспроизведение" if playing else "⏸️ Пауза"
-        st.caption(f"{status_text} — {current_t:.1f}с / {duration:.1f}с")
+    if not player_state:
+        return
+
+    duration = player_state.get("duration", 0)
+    base_t = player_state.get("currentTime", 0)
+    playing = player_state.get("playing", False)
+
+    # Синхронизация snapshot/wall с capture-фрагментом: если плеер push'нул
+    # новый snapshot - фиксируется момент, чтобы интерполяция работала с той же базой.
+    if player_state != st.session_state.player_snapshot:
+        st.session_state.player_snapshot = player_state
+        st.session_state.player_snapshot_wall = current_time()
+
+    display_t = base_t + (current_time() - st.session_state.player_snapshot_wall) if playing else base_t
+    status_text = "▶️ Воспроизведение" if playing else "⏸️ Пауза"
+    st.caption(f"{status_text} — {display_t:.1f}с / {duration:.1f}с")
 
 
 # ============================================
