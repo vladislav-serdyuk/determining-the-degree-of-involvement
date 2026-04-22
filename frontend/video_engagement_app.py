@@ -8,9 +8,13 @@ import cv2
 import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
+from dotenv import load_dotenv
 
 from api_client import EngagementAPIClient
 from components.video_player import video_player
+
+# Загрузка переменных из frontend/.env (системные env в приоритете)
+load_dotenv()
 
 APP_TITLE = "Анализ вовлечённости при просмотре видео"
 APP_ICON = "🎬"
@@ -300,6 +304,30 @@ def create_engagement_timeline(video_timestamps, engagement_history):
     return fig
 
 
+# ================================================
+# РЕНДЕР ПЛЕЕРА через @st.fragment (изолированный)
+# ================================================
+
+
+@st.fragment
+def render_player_fragment(url: str) -> None:
+    """
+    Изолированный рендер видеоплеера.
+
+    Компонент пушит setComponentValue на play/pause/seeked/loadedmetadata,
+    что триггерит rerun. Внутри @st.fragment rerun ограничен этим блоком -
+    основной while-цикл с захватом веб-камеры и WebSocket не прерывается,
+    а веб-камера не моргает при управлении плеером.
+    """
+    player_state = video_player(url, height=360, key="main_player")
+    if player_state:
+        duration = player_state.get("duration", 0)
+        current_t = player_state.get("currentTime", 0)
+        playing = player_state.get("playing", False)
+        status_text = "▶️ Воспроизведение" if playing else "⏸️ Пауза"
+        st.caption(f"{status_text} — {current_t:.1f}с / {duration:.1f}с")
+
+
 # ============================================
 # ОТРИСОВКА ГРАФИКОВ (in-place, без мерцания)
 # ============================================
@@ -411,14 +439,10 @@ def create_main_section():
     with video_col:
         st.markdown("#### 🎬 Видео")
         if video_url:
-            # Компонент с key="main_player" автоматически кладёт value в session_state
-            player_state_initial = video_player(video_url, height=360, key="main_player")
-            if player_state_initial:
-                duration = player_state_initial.get("duration", 0)
-                current_t = player_state_initial.get("currentTime", 0)
-                playing = player_state_initial.get("playing", False)
-                status_text = "▶️ Воспроизведение" if playing else "⏸️ Пауза"
-                st.caption(f"{status_text} — {current_t:.1f}с / {duration:.1f}с")
+            # Плеер рендерится внутри @st.fragment, теперь его rerun изолирован
+            # и не прерывает основной цикл захвата веб-камеры.
+            # Компонент с key="main_player" автоматически кладёт value в session_state.
+            render_player_fragment(video_url)
         else:
             st.info("Введите URL видеофайла для начала просмотра")
 
@@ -478,9 +502,9 @@ def create_main_section():
         "ear": ear_col.empty(),
     }
 
-    # Отрисовка последних данных сразу при rerun, чтобы избежать лишнего моргания графиков,
-    # т.к. плеер триггерит rerun каждые ~250мс (через timeupdate),
-    # а обновление происходит раз в CHART_UPDATE_INTERVAL кадров.
+    # Отрисовка последних данных при rerun, чтобы графики не исчезали при любом
+    # ререндере основного скрипта (например, при нажатии Запустить/Стоп).
+    # Внутри while-цикла графики обновляются раз в CHART_UPDATE_INTERVAL кадров.
     render_charts(chart_placeholders, suffix="last")
 
     # CSV-экспорт
