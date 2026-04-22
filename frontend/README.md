@@ -45,7 +45,6 @@ Features:
 - Video file URL input (.mp4, .webm, .ogg)
 - Custom video player with current position feedback
 - Engagement chart along the video timeline
-- Flicker-free charts (`@st.fragment`)
 - CSV data export
 
 
@@ -61,7 +60,7 @@ streamlit run engagement_app.py
 streamlit run video_engagement_app.py
 ```
 
-The backend must be available at `ws://localhost:8000`. If the backend is at a different address, set environment variables:
+The backend must be available at `ws://localhost:8000`. If the backend is at a different address, configure via `.env` (recommended — see [Environment Variables](#environment-variables)) or export the variables inline:
 
 ```bash
 BACKEND_WS_URL=ws://192.168.1.10:8000 \
@@ -69,20 +68,7 @@ BACKEND_HTTP_URL=http://192.168.1.10:8000 \
 streamlit run video_engagement_app.py
 ```
 
-### Option 2: Docker Compose (backend + frontend + Redis)
-
-From the repository root:
-
-```bash
-docker compose up -d --build
-```
-
-The frontend will be available at `http://localhost:8501`.
-
-> **Note:** Webcam (`cv2.VideoCapture(0)`) does not work inside a Docker container (Steamlit + OpenCV tech stack limitation)
-> The Docker option is suitable for demos with image/video uploads, but not for live camera capture.
-
-### Option 3: Parameter Testing Tool (standalone)
+### Option 2: Parameter Testing Tool (standalone)
 
 `param_testing_app.py` works as a monolith — it directly imports the backend ML pipeline without WebSocket. Used for experimenting with thresholds and parameters.
 
@@ -98,3 +84,13 @@ streamlit run tools/param_testing_app.py
 |---|---|---|
 | `BACKEND_WS_URL` | `ws://localhost:8000` | Backend WebSocket URL |
 | `BACKEND_HTTP_URL` | `http://localhost:8000` | Backend HTTP URL (health check) |
+
+Variables are loaded via `python-dotenv` from a `.env` file in the `frontend/` directory. Copy `.env.example` to `.env` and edit values as needed:
+
+```bash
+cd frontend
+cp .env.example .env
+# edit .env
+```
+
+System environment variables take precedence over `.env` entries.
