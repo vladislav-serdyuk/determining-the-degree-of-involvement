@@ -76,6 +76,13 @@ def load_css():
             font-size: 14px;
             font-weight: bold;
         }
+        /* Фиксированная высота info-боксов метрик */
+        div[data-testid="stAlert"],
+        div[data-testid="stAlertContainer"],
+        div[data-testid^="stAlertContent"] {
+            min-height: 50px !important;
+            box-sizing: border-box;
+        }
         </style>
         """,
             unsafe_allow_html=True,
@@ -156,8 +163,9 @@ if "webcam_start_wall" not in st.session_state:
 
 
 HEALTH_CHECK_INTERVAL = 10.0  # Интервал проверки доступности бэкенда (секунды)
-WEBCAM_FRAGMENT_INTERVAL = 1 / 15  # Интервал перезапуска фрагмента захвата (с) ≈ 15 FPS
+WEBCAM_FRAGMENT_INTERVAL = 1 / 10  # Интервал перезапуска фрагмента захвата (с) ≈ 10 FPS
 CHART_FRAGMENT_INTERVAL = 1.0  # Интервал перерисовки графиков (с) - отдельный фрагмент, независимый от захвата
+PLAYER_FRAGMENT_INTERVAL = 1.0  # Интервал перерисовки caption плеера (с) - для интерполяции currentTime
 
 
 def check_backend_health() -> bool:
@@ -311,14 +319,14 @@ def create_engagement_timeline(video_timestamps, engagement_history):
 # ================================================
 
 
-@st.fragment(run_every=0.5)
+@st.fragment(run_every=PLAYER_FRAGMENT_INTERVAL)
 def render_player_fragment(url: str) -> None:
     """
     Изолированный рендер видеоплеера.
 
     Компонент пушит setComponentValue только на play/pause/seeked/loadedmetadata,
-    поэтому currentTime во фрагменте между событиями застывает. run_every=0.5
-    перезапускает фрагмент дважды в секунду - caption дорисовывается wall-clock
+    поэтому currentTime во фрагменте между событиями застывает. run_every
+    перезапускает фрагмент раз в секунду - caption дорисовывается wall-clock
     интерполяцией так же, как video_ts в capture-фрагменте.
     """
     player_state = video_player(url, height=360, key="main_player")
@@ -709,10 +717,10 @@ def create_main_section():
         "ear": ear_col.empty(),
     }
 
-    # Отрисовка последних данных при rerun, чтобы графики не исчезали при любом
-    # ререндере основного скрипта (например, при нажатии Запустить/Стоп).
-    # В активном режиме chart_update_fragment обновляет графики раз в CHART_FRAGMENT_INTERVAL с.
-    render_charts(chart_placeholders)
+    # Отрисовка последних данных только при остановленной камере, чтобы графики
+    # не исчезали после Стоп/переключения URL.
+    if not st.session_state.webcam_running:
+        render_charts(chart_placeholders)
 
     # CSV-экспорт
     if st.session_state.export_data:

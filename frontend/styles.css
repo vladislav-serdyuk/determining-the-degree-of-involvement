@@ -71,3 +71,14 @@
     font-size: 0.8rem;
     opacity: 0.9;
 }
+
+/* Фиксированная минимальная высота info-боксов метрик (Eye/HPE/Emo),
+   чтобы длинные лейблы ("Highly Attentive", "Very Distracted") переносились
+   на 2 строки, но не ломали высоту соседних боксов в строке.
+   !important нужен, чтобы перекрыть дефолтные стили Streamlit. */
+div[data-testid="stAlert"],
+div[data-testid="stAlertContainer"],
+div[data-testid^="stAlertContent"] {
+    min-height: 50px !important;
+    box-sizing: border-box;
+}
