@@ -13,7 +13,6 @@ from dotenv import load_dotenv
 from api_client import EngagementAPIClient
 from components.video_player import video_player
 
-# Загрузка переменных из frontend/.env (системные env в приоритете)
 load_dotenv()
 
 APP_TITLE = "Анализ вовлечённости при просмотре видео"
@@ -76,13 +75,6 @@ def load_css():
             font-size: 14px;
             font-weight: bold;
         }
-        /* Фиксированная высота info-боксов метрик */
-        div[data-testid="stAlert"],
-        div[data-testid="stAlertContainer"],
-        div[data-testid^="stAlertContent"] {
-            min-height: 50px !important;
-            box-sizing: border-box;
-        }
         </style>
         """,
             unsafe_allow_html=True,
@@ -134,6 +126,9 @@ if "timestamps" not in st.session_state:
 if "frame_count" not in st.session_state:
     st.session_state.frame_count = 0
 
+if "chart_update_count" not in st.session_state:
+    st.session_state.chart_update_count = 0
+
 # Временные метки видео и история вовлечённости
 if "video_timestamps" not in st.session_state:
     st.session_state.video_timestamps = deque(maxlen=100)
@@ -157,15 +152,9 @@ if "player_snapshot" not in st.session_state:
 if "player_snapshot_wall" not in st.session_state:
     st.session_state.player_snapshot_wall = 0.0
 
-# Wall-clock момент старта текущей сессии веб-камеры - для локальной временной шкалы
-if "webcam_start_wall" not in st.session_state:
-    st.session_state.webcam_start_wall = 0.0
-
 
 HEALTH_CHECK_INTERVAL = 10.0  # Интервал проверки доступности бэкенда (секунды)
-WEBCAM_FRAGMENT_INTERVAL = 1 / 10  # Интервал перезапуска фрагмента захвата (с) ≈ 10 FPS
-CHART_FRAGMENT_INTERVAL = 1.0  # Интервал перерисовки графиков (с) - отдельный фрагмент, независимый от захвата
-PLAYER_FRAGMENT_INTERVAL = 1.0  # Интервал перерисовки caption плеера (с) - для интерполяции currentTime
+CHART_UPDATE_INTERVAL = 15    # Интервал обновления графиков (в кадрах)
 
 
 def check_backend_health() -> bool:
@@ -314,62 +303,29 @@ def create_engagement_timeline(video_timestamps, engagement_history):
     return fig
 
 
-# ================================================
-# РЕНДЕР ПЛЕЕРА через @st.fragment (изолированный)
-# ================================================
-
-
-@st.fragment(run_every=PLAYER_FRAGMENT_INTERVAL)
-def render_player_fragment(url: str) -> None:
-    """
-    Изолированный рендер видеоплеера.
-
-    Компонент пушит setComponentValue только на play/pause/seeked/loadedmetadata,
-    поэтому currentTime во фрагменте между событиями застывает. run_every
-    перезапускает фрагмент раз в секунду - caption дорисовывается wall-clock
-    интерполяцией так же, как video_ts в capture-фрагменте.
-    """
-    player_state = video_player(url, height=360, key="main_player")
-    if not player_state:
-        return
-
-    duration = player_state.get("duration", 0)
-    base_t = player_state.get("currentTime", 0)
-    playing = player_state.get("playing", False)
-
-    # Синхронизация snapshot/wall с capture-фрагментом: если плеер push'нул
-    # новый snapshot - фиксируется момент, чтобы интерполяция работала с той же базой.
-    if player_state != st.session_state.player_snapshot:
-        st.session_state.player_snapshot = player_state
-        st.session_state.player_snapshot_wall = current_time()
-
-    display_t = base_t + (current_time() - st.session_state.player_snapshot_wall) if playing else base_t
-    status_text = "▶️ Воспроизведение" if playing else "⏸️ Пауза"
-    st.caption(f"{status_text} — {display_t:.1f}с / {duration:.1f}с")
-
-
 # ============================================
 # ОТРИСОВКА ГРАФИКОВ (in-place, без мерцания)
 # ============================================
 
 
-def render_charts(placeholders: dict) -> None:
+def render_charts(placeholders: dict, suffix: str) -> None:
     """
     Отрисовка всех графиков в переданные placeholder'ы.
 
-    Ключи plotly_chart стабильные (без суффикса) - Streamlit переиспользует
-    виджет и обновляет данные in-place, без пересоздания DOM (иначе моргание).
+    Args:
+        placeholders: dict с ключами 'eng', 'pie', 'pose', 'ear'
+        suffix: Суффикс для уникального key plotly_chart (избегает DuplicateWidgetID)
     """
     eng_fig = create_engagement_timeline(
         st.session_state.video_timestamps,
         st.session_state.engagement_history,
     )
     if eng_fig:
-        placeholders["eng"].plotly_chart(eng_fig, key="chart_eng", width="stretch")
+        placeholders["eng"].plotly_chart(eng_fig, key=f"eng_{suffix}", width="stretch")
 
     pie_fig = create_emotion_pie_chart(st.session_state.emotion_history)
     if pie_fig:
-        placeholders["pie"].plotly_chart(pie_fig, key="chart_pie", width="stretch")
+        placeholders["pie"].plotly_chart(pie_fig, key=f"pie_{suffix}", width="stretch")
 
     pose_fig = create_head_pose_chart(
         st.session_state.timestamps,
@@ -378,14 +334,14 @@ def render_charts(placeholders: dict) -> None:
         st.session_state.head_pose_history["roll"],
     )
     if pose_fig:
-        placeholders["pose"].plotly_chart(pose_fig, key="chart_pose", width="stretch")
+        placeholders["pose"].plotly_chart(pose_fig, key=f"pose_{suffix}", width="stretch")
 
     ear_fig = create_ear_chart(
         st.session_state.timestamps,
         st.session_state.ear_history,
     )
     if ear_fig:
-        placeholders["ear"].plotly_chart(ear_fig, key="chart_ear", width="stretch")
+        placeholders["ear"].plotly_chart(ear_fig, key=f"ear_{suffix}", width="stretch")
 
 
 # ============================================
@@ -432,202 +388,6 @@ def display_header():
     st.markdown("---")
 
 
-@st.fragment(run_every=WEBCAM_FRAGMENT_INTERVAL)
-def webcam_capture_fragment(
-    video_placeholder,
-    comp_eye_metric,
-    comp_hpe_metric,
-    comp_emo_metric,
-    engagement_metric,
-    emotion_metric,
-    pitch_metric,
-    yaw_metric,
-    roll_metric,
-) -> None:
-    """
-    Одна итерация захвата кадра веб-камеры и обновления UI.
-
-    Streamlit автоматически перезапускает фрагмент каждые ~67 мс. Между вызовами
-    фрагмент плеера успевает обновить st.session_state.main_player, поэтому
-    pause/seek в видео видны в Python сразу же (в отличие от блокирующего
-    while-цикла, который полностью замораживал session_state).
-    """
-    if not st.session_state.webcam_running:
-        return
-
-    api_client: EngagementAPIClient = st.session_state.api_client
-    cap = st.session_state.camera
-    if cap is None or not cap.isOpened():
-        return
-
-    ret, frame = cap.read()
-    if not ret:
-        return
-
-    st.session_state.frame_count += 1
-    current_timestamp = current_time() - st.session_state.webcam_start_wall
-    st.session_state.timestamps.append(current_timestamp)
-
-    # Снимок плеера - обновляется между вызовами фрагмента, отражает pause/seek.
-    # Wall-clock интерполяция между снимками нужна для того, чтобы video_ts рос
-    # на кадрах между редкими событиями play/pause/seeked/loadedmetadata.
-    player_state = st.session_state.get("main_player")
-    if player_state and player_state != st.session_state.player_snapshot:
-        st.session_state.player_snapshot = player_state
-        st.session_state.player_snapshot_wall = current_time()
-
-    video_ts = None
-    snap = st.session_state.player_snapshot
-    if snap and snap.get("currentTime") is not None:
-        base_ts = snap["currentTime"]
-        if snap.get("playing"):
-            video_ts = base_ts + (current_time() - st.session_state.player_snapshot_wall)
-        else:
-            video_ts = base_ts
-
-    # Отправка кадра на бэкенд с временной меткой видео
-    try:
-        processed_frame, results, echoed_ts = api_client.send_frame(
-            frame, video_timestamp=video_ts
-        )
-    except Exception as e:
-        st.error(f"Ошибка отправки кадра: {e}")
-        return
-
-    # Отображение видео с bounding boxes от бэкенда (если он вернул обработанный кадр)
-    if processed_frame is not None:
-        img_rgb = cv2.cvtColor(processed_frame, cv2.COLOR_BGR2RGB)
-    else:
-        img_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-
-    height, width = img_rgb.shape[:2]
-    new_width = 320
-    new_height = int(height * new_width / width)
-    img_resized = cv2.resize(img_rgb, (new_width, new_height))
-    video_placeholder.image(img_resized, channels="RGB", width="stretch")
-
-    # Обновление метрик
-    if results:
-        result = results[0]  # Первое обнаруженное лицо
-
-        # Эмоция
-        emotion = result.get("emotion", "unknown")
-        confidence = result.get("confidence", 0)
-        emotion_metric.info(f"**{emotion}** (уверенность: {confidence:.2f})")
-        st.session_state.emotion_history.append(emotion)
-
-        # Вовлечённость
-        engagement = result.get("engagement")
-        ear = result.get("ear")
-        hp = result.get("head_pose")
-        engagement_score = 0
-        engagement_level = ""
-        if engagement:
-            components = engagement.get("components") or {}
-
-            # Eye (EAR) компонент
-            if ear and ear.get("attention_state"):
-                eye_s = components.get("eye_score", 0)
-                comp_eye_metric.info(f"**Eye:** {ear['attention_state']} ({eye_s:.2f})")
-            else:
-                comp_eye_metric.empty()
-
-            # HPE компонент
-            if hp and hp.get("attention_state"):
-                hp_s = components.get("head_pose_score", 0)
-                comp_hpe_metric.info(f"**HPE:** {hp['attention_state']} ({hp_s:.2f})")
-            else:
-                comp_hpe_metric.empty()
-
-            # Emotion компонент
-            emo_s = components.get("emotion_score", 0)
-            if emo_s:
-                comp_emo_metric.info(f"**Emo:** {emo_s:.2f}")
-            else:
-                comp_emo_metric.empty()
-
-            # Общий engagement
-            level = engagement.get("level", "—")
-            score = engagement.get("score", 0)
-            trend = engagement.get("trend", "stable")
-            trend_icon = {"rising": "↑", "falling": "↓", "stable": "→"}.get(trend, "")
-            engagement_metric.success(f"**Вовлечённость:** {level} ({score:.0%}) {trend_icon}")
-            engagement_score = score
-            engagement_level = level
-
-            # Сохранение для графика вовлечённости по видео
-            if echoed_ts is not None:
-                st.session_state.video_timestamps.append(echoed_ts)
-                st.session_state.engagement_history.append(score)
-        else:
-            comp_eye_metric.empty()
-            comp_hpe_metric.empty()
-            comp_emo_metric.empty()
-            engagement_metric.empty()
-
-        # Положение головы
-        pitch_val = yaw_val = roll_val = None
-        if result.get("head_pose"):
-            hp = result["head_pose"]
-            pitch_val = hp.get("pitch", 0)
-            yaw_val = hp.get("yaw", 0)
-            roll_val = hp.get("roll", 0)
-            pitch_metric.metric("Pitch", f"{pitch_val:.1f}°")
-            yaw_metric.metric("Yaw", f"{yaw_val:.1f}°")
-            roll_metric.metric("Roll", f"{roll_val:.1f}°")
-
-            st.session_state.head_pose_history["pitch"].append(pitch_val)
-            st.session_state.head_pose_history["yaw"].append(yaw_val)
-            st.session_state.head_pose_history["roll"].append(roll_val)
-        else:
-            pitch_metric.metric("Pitch", "—")
-            yaw_metric.metric("Yaw", "—")
-            roll_metric.metric("Roll", "—")
-
-        # EAR
-        ear_val = None
-        ear = result.get("ear")
-        if ear and ear.get("avg_ear") is not None:
-            ear_val = ear["avg_ear"]
-            st.session_state.ear_history.append(ear_val)
-
-        # Сохранение строки для CSV-экспорта
-        st.session_state.export_data.append({
-            "video_time": echoed_ts if echoed_ts is not None else current_timestamp,
-            "emotion": emotion,
-            "confidence": confidence,
-            "engagement_score": engagement_score,
-            "engagement_level": engagement_level,
-            "ear": ear_val,
-            "pitch": pitch_val,
-            "yaw": yaw_val,
-            "roll": roll_val,
-        })
-    else:
-        comp_eye_metric.empty()
-        comp_hpe_metric.empty()
-        comp_emo_metric.empty()
-        emotion_metric.warning("Лицо не обнаружено")
-        engagement_metric.empty()
-        pitch_metric.metric("Pitch", "—")
-        yaw_metric.metric("Yaw", "—")
-        roll_metric.metric("Roll", "—")
-
-
-@st.fragment(run_every=CHART_FRAGMENT_INTERVAL)
-def chart_update_fragment(chart_placeholders: dict) -> None:
-    """
-    Отдельный фрагмент обновления графиков.
-
-    Работает независимо от фрагмента захвата: тот пишет в session_state на каждом
-    кадре, а этот раз в CHART_FRAGMENT_INTERVAL секунд перерисовывает Plotly-фигуры.
-    Разделение снимает нагрузку с быстрого capture-loop'а и уменьшает моргание.
-    """
-    if not st.session_state.webcam_running:
-        return
-    render_charts(chart_placeholders)
-
-
 def create_main_section():
     """Создание основной секции приложения"""
 
@@ -654,10 +414,14 @@ def create_main_section():
     with video_col:
         st.markdown("#### 🎬 Видео")
         if video_url:
-            # Плеер рендерится внутри @st.fragment, его rerun изолирован.
-            # Компонент с key="main_player" автоматически кладёт value в session_state -
-            # и фрагмент захвата веб-камеры считывает его свежим на каждой итерации.
-            render_player_fragment(video_url)
+            # Компонент с key="main_player" автоматически кладёт value в session_state
+            player_state_initial = video_player(video_url, height=360, key="main_player")
+            if player_state_initial:
+                duration = player_state_initial.get("duration", 0)
+                current_t = player_state_initial.get("currentTime", 0)
+                playing = player_state_initial.get("playing", False)
+                status_text = "▶️ Воспроизведение" if playing else "⏸️ Пауза"
+                st.caption(f"{status_text} — {current_t:.1f}с / {duration:.1f}с")
         else:
             st.info("Введите URL видеофайла для начала просмотра")
 
@@ -717,10 +481,10 @@ def create_main_section():
         "ear": ear_col.empty(),
     }
 
-    # Отрисовка последних данных только при остановленной камере, чтобы графики
-    # не исчезали после Стоп/переключения URL.
-    if not st.session_state.webcam_running:
-        render_charts(chart_placeholders)
+    # Отрисовка последних данных сразу при rerun, чтобы избежать лишнего моргания графиков,
+    # т.к. плеер триггерит rerun каждые ~250мс (через timeupdate),
+    # а обновление происходит раз в CHART_UPDATE_INTERVAL кадров.
+    render_charts(chart_placeholders, suffix="last")
 
     # CSV-экспорт
     if st.session_state.export_data:
@@ -734,13 +498,9 @@ def create_main_section():
                 width="stretch",
             )
 
-    # Запуск веб-камеры через @st.fragment (run_every=...) вместо while-цикла.
-    # Плюс: между запусками фрагмента Streamlit успевает обработать rerun фрагмента
-    # плеера (setComponentValue на play/pause/seeked), поэтому st.session_state.main_player
-    # остаётся свежим - и график вовлечённости по времени видео корректно реагирует
-    # на pause/seek (на блокирующем while-цикле snapshot полностью замораживался).
+    # Запуск веб-камеры
     if st.session_state.webcam_running:
-        # Получение/открытие веб-камеры
+        # Получение веб-камеры из сессии
         cap = st.session_state.camera
         if cap is None or not cap.isOpened():
             cap = cv2.VideoCapture(0)
@@ -767,45 +527,206 @@ def create_main_section():
                 st.session_state.webcam_running = False
                 return
 
-        # Очистка истории графиков и сброс wall-clock старта при новом запуске
-        if st.session_state.get("needs_reset", False):
-            st.session_state.emotion_history.clear()
-            st.session_state.head_pose_history["pitch"].clear()
-            st.session_state.head_pose_history["yaw"].clear()
-            st.session_state.head_pose_history["roll"].clear()
-            st.session_state.ear_history.clear()
-            st.session_state.timestamps.clear()
-            st.session_state.video_timestamps.clear()
-            st.session_state.engagement_history.clear()
-            st.session_state.export_data.clear()
-            st.session_state.frame_count = 0
-            st.session_state.webcam_start_wall = current_time()
-            st.session_state.player_snapshot = None
-            st.session_state.needs_reset = False
+        try:
+            # Очистка истории графиков при новом запуске
+            if st.session_state.get("needs_reset", False):
+                st.session_state.emotion_history.clear()
+                st.session_state.head_pose_history["pitch"].clear()
+                st.session_state.head_pose_history["yaw"].clear()
+                st.session_state.head_pose_history["roll"].clear()
+                st.session_state.ear_history.clear()
+                st.session_state.timestamps.clear()
+                st.session_state.video_timestamps.clear()
+                st.session_state.engagement_history.clear()
+                st.session_state.export_data.clear()
+                st.session_state.frame_count = 0
+                st.session_state.chart_update_count = 0
+                st.session_state.needs_reset = False
 
-        # Запуск фрагментов - дальше Streamlit сам их перезапускает независимо:
-        # capture каждые WEBCAM_FRAGMENT_INTERVAL с (лёгкие обновления метрик),
-        # chart-update каждые CHART_FRAGMENT_INTERVAL с (тяжёлые Plotly-графики).
-        webcam_capture_fragment(
-            video_placeholder,
-            comp_eye_metric,
-            comp_hpe_metric,
-            comp_emo_metric,
-            engagement_metric,
-            emotion_metric,
-            pitch_metric,
-            yaw_metric,
-            roll_metric,
-        )
-        chart_update_fragment(chart_placeholders)
-    else:
-        # Освобождение ресурсов при остановке веб-камеры
-        if st.session_state.camera is not None:
-            st.session_state.camera.release()
-            st.session_state.camera = None
-        if api_client.is_connected:
-            api_client.disconnect()
-        video_placeholder.empty()
+            start_time = current_time()
+
+            while st.session_state.webcam_running:
+                ret, frame = cap.read()
+                if not ret:
+                    break
+
+                st.session_state.frame_count += 1
+                current_timestamp = current_time() - start_time
+                st.session_state.timestamps.append(current_timestamp)
+
+                # Интерполяция video_timestamp по wall-clock.
+                # Плеер отправляет snapshot только на play/pause/seeked/loadedmetadata,
+                # чтобы не триггерить rerun Streamlit чаще необходимого (даже при изолированном
+                # rerun видеоплеера). Между снимками currentTime дорисовывается 
+                # по прошедшему реальному времени.
+                player_state = st.session_state.get("main_player")
+                if player_state and player_state != st.session_state.player_snapshot:
+                    # Новый снимок от плеера — зафиксировать момент получения
+                    st.session_state.player_snapshot = player_state
+                    st.session_state.player_snapshot_wall = current_time()
+
+                video_ts = None
+                snap = st.session_state.player_snapshot
+                if snap and snap.get("currentTime") is not None:
+                    base_ts = snap["currentTime"]
+                    if snap.get("playing"):
+                        video_ts = base_ts + (current_time() - st.session_state.player_snapshot_wall)
+                    else:
+                        video_ts = base_ts
+
+                # Отправка кадра на бэкенд с временной меткой видео
+                processed_frame, results, echoed_ts = api_client.send_frame(
+                    frame, video_timestamp=video_ts
+                )
+
+                # Отображение видео
+                if processed_frame is not None:
+                    img_rgb = cv2.cvtColor(processed_frame, cv2.COLOR_BGR2RGB)
+                else:
+                    img_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+                # Изменение размера для отображения
+                height, width = img_rgb.shape[:2]
+                new_width = 320
+                new_height = int(height * new_width / width)
+                img_resized = cv2.resize(img_rgb, (new_width, new_height))
+
+                video_placeholder.image(img_resized, channels="RGB", width="stretch")
+
+                # Обновление метрик
+                if results:
+                    result = results[0]  # Первое обнаруженное лицо
+
+                    # Эмоция
+                    emotion = result.get("emotion", "unknown")
+                    confidence = result.get("confidence", 0)
+                    emotion_metric.info(
+                        f"**{emotion}** "
+                        f"(уверенность: {confidence:.2f})"
+                    )
+                    st.session_state.emotion_history.append(emotion)
+
+                    # Вовлечённость
+                    engagement = result.get("engagement")
+                    ear = result.get("ear")
+                    hp = result.get("head_pose")
+                    engagement_score = 0
+                    engagement_level = ""
+                    if engagement:
+                        components = engagement.get("components") or {}
+
+                        # Eye (EAR) компонент
+                        if ear and ear.get("attention_state"):
+                            eye_s = components.get("eye_score", 0)
+                            comp_eye_metric.info(
+                                f"**Eye:** {ear['attention_state']} ({eye_s:.2f})"
+                            )
+                        else:
+                            comp_eye_metric.empty()
+
+                        # HPE компонент
+                        if hp and hp.get("attention_state"):
+                            hp_s = components.get("head_pose_score", 0)
+                            comp_hpe_metric.info(
+                                f"**HPE:** {hp['attention_state']} ({hp_s:.2f})"
+                            )
+                        else:
+                            comp_hpe_metric.empty()
+
+                        # Emotion компонент
+                        emo_s = components.get("emotion_score", 0)
+                        if emo_s:
+                            comp_emo_metric.info(f"**Emo:** {emo_s:.2f}")
+                        else:
+                            comp_emo_metric.empty()
+
+                        # Общий engagement
+                        level = engagement.get("level", "—")
+                        score = engagement.get("score", 0)
+                        trend = engagement.get("trend", "stable")
+                        trend_icon = {"rising": "↑", "falling": "↓", "stable": "→"}.get(trend, "")
+                        engagement_metric.success(
+                            f"**Вовлечённость:** {level} ({score:.0%}) {trend_icon}"
+                        )
+                        engagement_score = score
+                        engagement_level = level
+
+                        # Сохранение для графика вовлечённости по видео
+                        if echoed_ts is not None:
+                            st.session_state.video_timestamps.append(echoed_ts)
+                            st.session_state.engagement_history.append(score)
+                    else:
+                        comp_eye_metric.empty()
+                        comp_hpe_metric.empty()
+                        comp_emo_metric.empty()
+                        engagement_metric.empty()
+
+                    # Положение головы
+                    pitch_val = yaw_val = roll_val = None
+                    if result.get("head_pose"):
+                        hp = result["head_pose"]
+                        pitch_val = hp.get("pitch", 0)
+                        yaw_val = hp.get("yaw", 0)
+                        roll_val = hp.get("roll", 0)
+                        pitch_metric.metric("Pitch", f"{pitch_val:.1f}°")
+                        yaw_metric.metric("Yaw", f"{yaw_val:.1f}°")
+                        roll_metric.metric("Roll", f"{roll_val:.1f}°")
+
+                        st.session_state.head_pose_history["pitch"].append(pitch_val)
+                        st.session_state.head_pose_history["yaw"].append(yaw_val)
+                        st.session_state.head_pose_history["roll"].append(roll_val)
+                    else:
+                        pitch_metric.metric("Pitch", "—")
+                        yaw_metric.metric("Yaw", "—")
+                        roll_metric.metric("Roll", "—")
+
+                    # EAR
+                    ear_val = None
+                    ear = result.get("ear")
+                    if ear and ear.get("avg_ear") is not None:
+                        ear_val = ear["avg_ear"]
+                        st.session_state.ear_history.append(ear_val)
+
+                    # Сохранение строки для CSV-экспорта
+                    st.session_state.export_data.append({
+                        "video_time": echoed_ts if echoed_ts is not None else current_timestamp,
+                        "emotion": emotion,
+                        "confidence": confidence,
+                        "engagement_score": engagement_score,
+                        "engagement_level": engagement_level,
+                        "ear": ear_val,
+                        "pitch": pitch_val,
+                        "yaw": yaw_val,
+                        "roll": roll_val,
+                    })
+                else:
+                    comp_eye_metric.empty()
+                    comp_hpe_metric.empty()
+                    comp_emo_metric.empty()
+                    emotion_metric.warning("Лицо не обнаружено")
+                    engagement_metric.empty()
+                    pitch_metric.metric("Pitch", "—")
+                    yaw_metric.metric("Yaw", "—")
+                    roll_metric.metric("Roll", "—")
+
+                # Обновление графиков с фиксированной частотой (in-place)
+                if st.session_state.frame_count % CHART_UPDATE_INTERVAL == 0:
+                    n = st.session_state.chart_update_count
+                    st.session_state.chart_update_count = n + 1
+                    render_charts(chart_placeholders, suffix=str(n))
+
+        except Exception as e:
+            st.error(f"Ошибка: {e}")
+        finally:
+            # Камера и WebSocket сохраняются в session_state для переиспользования
+            # между rerun-ами (которые триггерит компонент плеера).
+            # Освобождение ресурсов только при явной остановке webcam.
+            if not st.session_state.get("webcam_running", True):
+                if st.session_state.camera is not None:
+                    st.session_state.camera.release()
+                    st.session_state.camera = None
+                api_client.disconnect()
+                video_placeholder.empty()
 
 
 def main():
