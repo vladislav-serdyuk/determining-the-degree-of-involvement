@@ -1,6 +1,7 @@
 # Eye Aspect Ratio (EAR). Анализ состояния глаз
 
 **Файл:** [`backend/app/services/video_processing/analyze_ear.py`](../../backend/app/services/video_processing/analyze_ear.py)
+
 **Источник landmarks:** MediaPipe Face Mesh (468 точек, подмножество из 6 точек на каждый глаз)
 
 
