@@ -11,7 +11,7 @@
 1. [Обзор пайплайна](pipeline-overview.md) - общая схема, порядок вызовов, ресурсы
 2. [Детекция лиц](face-detection.md) - MediaPipe Face Detection
 3. [Распознавание эмоций](emotion-recognition.md) - EmotiEffLib (EfficientNet-B2)
-4. Анализ глаз (EAR) - Eye Aspect Ratio, моргания, attention_state
+4. [Анализ состояния глаз (EAR)](eye-aspect-ratio.md) - Eye Aspect Ratio, моргания, attention_state
 5. Поза головы (HPE) - Perspective-n-Point (PnP), углы Эйлера, attention_state
 6. Временное сглаживание - как сигнал стабилизируется на каждом уровне
 
