@@ -556,9 +556,8 @@ def create_main_section():
 
                 # Интерполяция video_timestamp по wall-clock.
                 # Плеер отправляет snapshot только на play/pause/seeked/loadedmetadata,
-                # чтобы не триггерить rerun Streamlit чаще необходимого (даже при изолированном
-                # rerun видеоплеера). Между снимками currentTime дорисовывается 
-                # по прошедшему реальному времени.
+                # чтобы не триггерить rerun Streamlit чаще необходимого (rerun рвёт камеру и WS).
+                # Между снимками currentTime дорисовывается по прошедшему реальному времени.
                 player_state = st.session_state.get("main_player")
                 if player_state and player_state != st.session_state.player_snapshot:
                     # Новый снимок от плеера — зафиксировать момент получения
