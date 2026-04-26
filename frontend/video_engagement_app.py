@@ -411,17 +411,20 @@ def create_main_section():
     # Верхняя строка: видеоплеер (2/3) + веб-камера (1/3)
     video_col, webcam_col = st.columns([2, 1])
 
+    # Плейсхолдер подписи плеера (обновляется в while-цикле по wall-clock интерполяции)
+    caption_placeholder = None
     with video_col:
         st.markdown("#### 🎬 Видео")
         if video_url:
             # Компонент с key="main_player" автоматически кладёт value в session_state
             player_state_initial = video_player(video_url, height=360, key="main_player")
+            caption_placeholder = st.empty()
             if player_state_initial:
                 duration = player_state_initial.get("duration", 0)
                 current_t = player_state_initial.get("currentTime", 0)
                 playing = player_state_initial.get("playing", False)
                 status_text = "▶️ Воспроизведение" if playing else "⏸️ Пауза"
-                st.caption(f"{status_text} — {current_t:.1f}с / {duration:.1f}с")
+                caption_placeholder.caption(f"{status_text} — {current_t:.1f}с / {duration:.1f}с")
         else:
             st.info("Введите URL видеофайла для начала просмотра")
 
@@ -572,6 +575,14 @@ def create_main_section():
                         video_ts = base_ts + (current_time() - st.session_state.player_snapshot_wall)
                     else:
                         video_ts = base_ts
+
+                # Обновление подписи плеера интерполированным video_ts
+                if caption_placeholder is not None and snap is not None and video_ts is not None:
+                    duration = snap.get("duration", 0) or 0
+                    status_text = "▶️ Воспроизведение" if snap.get("playing") else "⏸️ Пауза"
+                    caption_placeholder.caption(
+                        f"{status_text} — {video_ts:.1f}с / {duration:.1f}с"
+                    )
 
                 # Отправка кадра на бэкенд с временной меткой видео
                 processed_frame, results, echoed_ts = api_client.send_frame(
