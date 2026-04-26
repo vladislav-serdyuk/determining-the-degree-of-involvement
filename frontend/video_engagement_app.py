@@ -126,9 +126,6 @@ if "timestamps" not in st.session_state:
 if "frame_count" not in st.session_state:
     st.session_state.frame_count = 0
 
-if "chart_update_count" not in st.session_state:
-    st.session_state.chart_update_count = 0
-
 # Временные метки видео и история вовлечённости
 if "video_timestamps" not in st.session_state:
     st.session_state.video_timestamps = deque(maxlen=100)
@@ -308,24 +305,28 @@ def create_engagement_timeline(video_timestamps, engagement_history):
 # ============================================
 
 
-def render_charts(placeholders: dict, suffix: str) -> None:
+def render_charts(placeholders: dict) -> None:
     """
     Отрисовка всех графиков в переданные placeholder'ы.
 
+    `key` не передаётся: внутри длинного while-цикла render_charts вызывается
+    многократно за один script run (раз в CHART_UPDATE_INTERVAL кадров),
+    и любой стабильный key привёл бы к DuplicateWidgetID. Без key Streamlit
+    использует placeholder для in-place замены, не регистрируя widget по ключу.
+
     Args:
         placeholders: dict с ключами 'eng', 'pie', 'pose', 'ear'
-        suffix: Суффикс для уникального key plotly_chart (избегает DuplicateWidgetID)
     """
     eng_fig = create_engagement_timeline(
         st.session_state.video_timestamps,
         st.session_state.engagement_history,
     )
     if eng_fig:
-        placeholders["eng"].plotly_chart(eng_fig, key=f"eng_{suffix}", width="stretch")
+        placeholders["eng"].plotly_chart(eng_fig, width="stretch")
 
     pie_fig = create_emotion_pie_chart(st.session_state.emotion_history)
     if pie_fig:
-        placeholders["pie"].plotly_chart(pie_fig, key=f"pie_{suffix}", width="stretch")
+        placeholders["pie"].plotly_chart(pie_fig, width="stretch")
 
     pose_fig = create_head_pose_chart(
         st.session_state.timestamps,
@@ -334,14 +335,14 @@ def render_charts(placeholders: dict, suffix: str) -> None:
         st.session_state.head_pose_history["roll"],
     )
     if pose_fig:
-        placeholders["pose"].plotly_chart(pose_fig, key=f"pose_{suffix}", width="stretch")
+        placeholders["pose"].plotly_chart(pose_fig, width="stretch")
 
     ear_fig = create_ear_chart(
         st.session_state.timestamps,
         st.session_state.ear_history,
     )
     if ear_fig:
-        placeholders["ear"].plotly_chart(ear_fig, key=f"ear_{suffix}", width="stretch")
+        placeholders["ear"].plotly_chart(ear_fig, width="stretch")
 
 
 # ============================================
@@ -484,10 +485,11 @@ def create_main_section():
         "ear": ear_col.empty(),
     }
 
-    # Отрисовка последних данных сразу при rerun, чтобы избежать лишнего моргания графиков,
-    # т.к. плеер триггерит rerun каждые ~250мс (через timeupdate),
-    # а обновление происходит раз в CHART_UPDATE_INTERVAL кадров.
-    render_charts(chart_placeholders, suffix="last")
+    # Отрисовка последних данных только когда камера выключена.
+    # При активной камере графики обновляет while-цикл ниже — повторный вызов
+    # с теми же стабильными ключами вызвал бы DuplicateWidgetID.
+    if not st.session_state.webcam_running:
+        render_charts(chart_placeholders)
 
     # CSV-экспорт
     if st.session_state.export_data:
@@ -543,7 +545,6 @@ def create_main_section():
                 st.session_state.engagement_history.clear()
                 st.session_state.export_data.clear()
                 st.session_state.frame_count = 0
-                st.session_state.chart_update_count = 0
                 st.session_state.needs_reset = False
 
             start_time = current_time()
@@ -721,9 +722,7 @@ def create_main_section():
 
                 # Обновление графиков с фиксированной частотой (in-place)
                 if st.session_state.frame_count % CHART_UPDATE_INTERVAL == 0:
-                    n = st.session_state.chart_update_count
-                    st.session_state.chart_update_count = n + 1
-                    render_charts(chart_placeholders, suffix=str(n))
+                    render_charts(chart_placeholders)
 
         except Exception as e:
             st.error(f"Ошибка: {e}")
