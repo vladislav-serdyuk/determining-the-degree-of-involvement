@@ -107,7 +107,7 @@ async def stream(
             prc_b64 = base64.b64encode(prc_buffer).decode("utf-8")
 
             try:
-                await room_service.send_frame(client, image_b64, prc_b64, results)
+                await room_service.send_frame(client, image_b64, prc_b64, results, frame_request.video_timestamp)
             except RedisConnectionError:
                 logger.error(f"Redis unavailable during send_frame for client {client.id_}")
 
@@ -184,7 +184,7 @@ async def client_stream(
             # Сериализация ответа через Pydantic-схему
             results_validated = [FaceAnalysisResult.model_validate(asdict(r)) for r in frame_data.results]
             response = OutputStreamFrameResponse(
-                image_src=frame_data.src_b64, image=frame_data.prc_b64, results=results_validated
+                image_src=frame_data.src_b64, image=frame_data.prc_b64, results=results_validated, video_timestamp=frame_data.video_timestamp
             )
             await websocket.send_json(response.model_dump())
 

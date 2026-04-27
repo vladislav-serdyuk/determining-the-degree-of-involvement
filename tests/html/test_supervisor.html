@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta content="width=device-width, initial-scale=1.0" name="viewport">
-    <title>Hypervisor Test</title>
+    <title>Supervisor Test</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -135,6 +135,9 @@
     <div class="connection-info" id="connectionInfo">Connection URL: -</div>
     <div class="fps-display">
         <strong>Receive FPS:</strong> <span id="actualReceiveFps">0</span>
+    </div>
+    <div class="fps-display">
+        <strong>Video Timestamp:</strong> <span id="videoTimestamp">0.000</span> sec
     </div>
 </div>
 
@@ -357,6 +360,11 @@
                     console.error('Server error:', data.error);
                 } else {
                     displayFrames(data.image_src, data.image, data.results);
+                    // Display video timestamp if available
+                    const videoTimestampEl = document.getElementById('videoTimestamp');
+                    if (videoTimestampEl && data.video_timestamp !== null && data.video_timestamp !== undefined) {
+                        videoTimestampEl.textContent = data.video_timestamp.toFixed(3);
+                    }
                 }
             } catch (e) {
                 console.error('Failed to parse message:', e);

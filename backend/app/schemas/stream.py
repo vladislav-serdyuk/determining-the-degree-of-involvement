@@ -78,6 +78,7 @@ class OutputStreamFrameResponse(BaseModel):
     image_src: str
     image: str
     results: list[FaceAnalysisResult]
+    video_timestamp: float | None = None
 
 
 class ErrorResponse(BaseModel):

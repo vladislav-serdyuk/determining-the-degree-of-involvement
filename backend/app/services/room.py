@@ -109,7 +109,7 @@ class RoomService:
         return await self.storage.client_is_closed(client)  # type: ignore[no-any-return]
 
     async def send_frame(
-        self, client: Client, src_b64: str, prc_b64: str, results: list[OneFaceMetricsAnalyzeResult]
+        self, client: Client, src_b64: str, prc_b64: str, results: list[OneFaceMetricsAnalyzeResult], video_timestamp: float | None = None
     ) -> None:
         """
         Отправляет кадр клиенту через Pub/Sub.
@@ -119,8 +119,9 @@ class RoomService:
             src_b64: Исходное изображение в base64
             prc_b64: Обработанное изображение в base64
             results: Результаты анализа для каждого лица
+            video_timestamp: Временная метка видео
         """
-        await self.storage.send_frame(client, src_b64, prc_b64, results)
+        await self.storage.send_frame(client, src_b64, prc_b64, results, video_timestamp)
 
     async def get_frame_raw(self, client: Client, timeout: float = 0.0) -> ClientFrameRaw | None:
         """
