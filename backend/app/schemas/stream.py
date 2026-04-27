@@ -7,6 +7,7 @@ class FrameRequest(BaseModel):
     """Входящие WS-сообщение - кадр от клиента"""
 
     image: str
+    video_timestamp: float | None = None
 
 
 class EARResult(BaseModel):
@@ -68,6 +69,7 @@ class FrameResponse(BaseModel):
 
     image: str
     results: list[FaceAnalysisResult]
+    video_timestamp: float | None = None
 
 
 class OutputStreamFrameResponse(BaseModel):

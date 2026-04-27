@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            background: transparent;
+            font-family: sans-serif;
+        }
+        .player-container {
+            width: 100%;
+            background: #000;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        video {
+            width: 100%;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="player-container">
+        <video id="player" controls preload="metadata"></video>
+    </div>
+
+    <script>
+        // Прямое общение с родителем через postMessage по протоколу Streamlit,
+        // чтобы не зависеть от внешней библиотеки streamlit-component-lib (она не публикуется как CDN-файл).
+        const video = document.getElementById("player");
+        let currentUrl = "";
+        let lastHeight = 0;
+
+        function sendMessage(type, data) {
+            const payload = Object.assign({ isStreamlitMessage: true, type: type }, data || {});
+            window.parent.postMessage(payload, "*");
+        }
+
+        function setFrameHeight() {
+            // Высота iframe подгоняется под содержимое (видео + контролы)
+            const h = document.body.scrollHeight;
+            if (h !== lastHeight) {
+                lastHeight = h;
+                sendMessage("streamlit:setFrameHeight", { height: h });
+            }
+        }
+
+        function sendState() {
+            sendMessage("streamlit:setComponentValue", {
+                value: {
+                    currentTime: video.currentTime,
+                    playing: !video.paused,
+                    duration: isFinite(video.duration) ? video.duration : 0,
+                },
+                dataType: "json",
+            });
+        }
+
+        function onRender(data) {
+            // Streamlit отдаёт args в data.args
+            const args = (data && data.args) || {};
+            const url = args.url || "";
+
+            // Обновление src только при смене URL (иначе каждый rerun перезагружал бы видео)
+            if (url && url !== currentUrl) {
+                currentUrl = url;
+                video.src = url;
+                video.load();
+            }
+            setFrameHeight();
+        }
+
+        // sendState НЕ вешается на timeupdate (~4 раза/сек) и не запускается по таймеру,
+        // потому что каждый вызов setComponentValue триггерит rerun Streamlit, что прерывает
+        // захват веб-камеры и вызывает моргание canvas. Snapshot отправляется только на
+        // явных событиях (play/pause/seeked) — между ними Python интерполирует currentTime
+        // по wall-clock. Точность достаточная, дрейф корректируется на любом seek.
+        video.addEventListener("play", sendState);
+        video.addEventListener("pause", sendState);
+        video.addEventListener("seeked", sendState);
+        video.addEventListener("loadedmetadata", () => {
+            setFrameHeight();
+            sendState();
+        });
+
+        window.addEventListener("message", (event) => {
+            const data = event.data;
+            if (!data || typeof data.type !== "string") return;
+            if (data.type === "streamlit:render") {
+                onRender(data);
+            }
+        });
+
+        // Сообщение готовности — Streamlit ждёт его, иначе показывает "trouble loading"
+        sendMessage("streamlit:componentReady", { apiVersion: 1 });
+        setFrameHeight();
+
+        // Страховка по высоте при динамической смене размера
+        window.addEventListener("resize", setFrameHeight);
+        setInterval(setFrameHeight, 1000);
+    </script>
+</body>
+</html>
