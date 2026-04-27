@@ -1,6 +1,7 @@
 import math
 import os
 import sys
+from collections import deque
 
 import cv2
 import mediapipe as mp
@@ -34,6 +35,8 @@ MARKER_OBJECT_POINTS = np.array(
     dtype=np.float32,
 )
 
+SMOOTHING_WINDOW_SIZE = 6
+
 
 def rotation_vector_to_euler_angles(rotation_vector: np.ndarray) -> tuple[float, float, float]:
     rotation_matrix, _ = cv2.Rodrigues(rotation_vector)
@@ -64,6 +67,10 @@ def main():
     head_pose_estimator = HeadPoseEstimator()
 
     print("Нажмите 'q' для выхода")
+
+    aruco_history_pitch: deque[float] = deque(maxlen=SMOOTHING_WINDOW_SIZE)
+    aruco_history_yaw: deque[float] = deque(maxlen=SMOOTHING_WINDOW_SIZE)
+    aruco_history_roll: deque[float] = deque(maxlen=SMOOTHING_WINDOW_SIZE)
 
     diffs_pitch = []
     diffs_yaw = []
@@ -99,19 +106,28 @@ def main():
                     tvecs.append(tvec)
 
             pitch, yaw, roll = rotation_vector_to_euler_angles(rvecs[0])
-            aruco_results = {'pitch': pitch, 'yaw': yaw, 'roll': roll}
+
+            aruco_history_pitch.append(pitch)
+            aruco_history_yaw.append(yaw)
+            aruco_history_roll.append(roll)
+
+            smoothed_pitch = sum(aruco_history_pitch) / len(aruco_history_pitch)
+            smoothed_yaw = sum(aruco_history_yaw) / len(aruco_history_yaw)
+            smoothed_roll = sum(aruco_history_roll) / len(aruco_history_roll)
+
+            aruco_results = {'pitch': smoothed_pitch, 'yaw': smoothed_yaw, 'roll': smoothed_roll}
 
             cv2.drawFrameAxes(frame, CALIBRATION_MATRIX, DISTORTION_COEFFS, rvecs[0], tvecs[0], 0.03)
             cv2.putText(
                 frame,
-                f"ArUco: P:{pitch:.1f} Y:{yaw:.1f} R:{roll:.1f}",
+                f"ArUco: P:{smoothed_pitch:.1f} Y:{smoothed_yaw:.1f} R:{smoothed_roll:.1f}",
                 (10, 30),
                 cv2.FONT_HERSHEY_SIMPLEX,
                 0.6,
                 (0, 255, 0),
                 2,
             )
-            print(f"ArUco: P:{pitch:.1f} Y:{yaw:.1f} R:{roll:.1f}")
+            print(f"ArUco: P:{smoothed_pitch:.1f} Y:{smoothed_yaw:.1f} R:{smoothed_roll:.1f}")
 
         if face_mesh_results.multi_face_landmarks:
             face_landmarks = face_mesh_results.multi_face_landmarks[0]
