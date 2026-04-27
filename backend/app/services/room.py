@@ -109,7 +109,12 @@ class RoomService:
         return await self.storage.client_is_closed(client)  # type: ignore[no-any-return]
 
     async def send_frame(
-        self, client: Client, src_b64: str, prc_b64: str, results: list[OneFaceMetricsAnalyzeResult], video_timestamp: float | None = None
+        self,
+        client: Client,
+        src_b64: str,
+        prc_b64: str,
+        results: list[OneFaceMetricsAnalyzeResult],
+        video_timestamp: float | None = None,
     ) -> None:
         """
         Отправляет кадр клиенту через Pub/Sub.

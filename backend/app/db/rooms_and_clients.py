@@ -262,7 +262,14 @@ class ClientAndRoomStorage:
         logger.debug(f"Client {client.id_} is_closed={is_closed}")
         return is_closed
 
-    async def send_frame(self, client: Client, src_b64: str, prc_b64: str, results: list[OneFaceMetricsAnalyzeResult], video_timestamp: float | None = None):
+    async def send_frame(
+        self,
+        client: Client,
+        src_b64: str,
+        prc_b64: str,
+        results: list[OneFaceMetricsAnalyzeResult],
+        video_timestamp: float | None = None,
+    ):
         """
         Отправляет кадр клиенту через Redis Pub/Sub.
 
@@ -278,7 +285,7 @@ class ClientAndRoomStorage:
             "src": src_b64,
             "prc": prc_b64,
             "result": [_result_to_dict(r) for r in results],
-            "video_timestamp": video_timestamp
+            "video_timestamp": video_timestamp,
         }
         await self.redis.publish(f"client_stream:{client.id_}", json.dumps(payload))
 
@@ -309,7 +316,7 @@ class ClientAndRoomStorage:
             data["src"],
             data["prc"],
             [from_dict(OneFaceMetricsAnalyzeResult, item) for item in data["result"]],
-            data["video_timestamp"]
+            data["video_timestamp"],
         )
 
     async def remove_tracked_clients_from_db(self):

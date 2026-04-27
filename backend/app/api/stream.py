@@ -184,7 +184,10 @@ async def client_stream(
             # Сериализация ответа через Pydantic-схему
             results_validated = [FaceAnalysisResult.model_validate(asdict(r)) for r in frame_data.results]
             response = OutputStreamFrameResponse(
-                image_src=frame_data.src_b64, image=frame_data.prc_b64, results=results_validated, video_timestamp=frame_data.video_timestamp
+                image_src=frame_data.src_b64,
+                image=frame_data.prc_b64,
+                results=results_validated,
+                video_timestamp=frame_data.video_timestamp,
             )
             await websocket.send_json(response.model_dump())
 
