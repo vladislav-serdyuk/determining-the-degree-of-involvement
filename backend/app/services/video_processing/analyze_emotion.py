@@ -58,17 +58,19 @@ class EmotionRecognizer:
             ambiguity_threshold if ambiguity_threshold is not None else settings.emotion_ambiguity_threshold
         )
         if device is not None or model_name is not None:
-            if settings.emotion_device == "auto":
-                device = "cuda" if torch.cuda.is_available() else "cpu"
-            elif settings.emotion_device == "cuda":
+            requested_device = device if device is not None else settings.emotion_device
+            if requested_device == "auto":
+                resolved_device = "cuda" if torch.cuda.is_available() else "cpu"
+            elif requested_device == "cuda":
                 if torch.cuda.is_available():
-                    device = "cuda"
+                    resolved_device = "cuda"
                 else:
-                    device = "cpu"
+                    resolved_device = "cpu"
                     warnings.warn('device in EmotionRecognizer() is set as "cuda", but cuda is unavailable')
             else:
-                device = "cpu"
-            self.recognizer = EmotiEffLibRecognizer(model_name=model_name, device=device)
+                resolved_device = "cpu"
+            actual_model_name = model_name if model_name is not None else settings.emotion_model_name
+            self.recognizer = EmotiEffLibRecognizer(model_name=actual_model_name, device=resolved_device)
 
         self._validate_window_size(actual_window_size)
         self._validate_confidence_threshold(actual_confidence)
