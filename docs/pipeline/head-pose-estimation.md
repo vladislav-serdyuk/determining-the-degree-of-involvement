@@ -1,6 +1,7 @@
 # Head Pose Estimation (HPE). Оценка положения головы в пространстве
 
 **Файл:** [`backend/app/services/video_processing/analyze_head_pose.py`](../../backend/app/services/video_processing/analyze_head_pose.py)
+
 **Метод:** Perspective-n-Point (PnP) на 6 ключевых лицевых точках, полученных от MediaPipe
 
 
@@ -127,7 +128,8 @@ else:                              → "Very Distracted"
 
 **Особенность:** `roll` в классификацию **не входит**. Наклон к плечу не уменьшает attention_state - при таком отклонении визуальный контакт с экраном сохраняется, делая это дополнительное условие избыточным. Учитываем только отклонения "влево-вправо", "вверх-вниз".
 
-| `attention_state` | |pitch| | |yaw| | Смысл |
+
+| `attention_state` | \|pitch\| | \|yaw\| | Смысл |
 |-------------------|---------|-------|-------|
 | `Highly Attentive` | < 10° | < 15° | Прямой взгляд на экран |
 | `Attentive` | < 20° | < 25° | Лёгкое отклонение (клавиатура, тетрадь) |
