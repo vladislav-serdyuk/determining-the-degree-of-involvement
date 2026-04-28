@@ -52,7 +52,8 @@ import json
 import base64
 
 data = {
-    "image": "base64_encoded_jpeg_image"
+    "image": "base64_encoded_jpeg_image",
+    "video_timestamp": 123.456  # опциональная временная метка видео
 }
 ws.send(json.dumps(data))
 ```
@@ -99,7 +100,8 @@ ws.send(json.dumps(data))
                 "frame_count": 150
             }
         }
-    ]
+    ],
+    "video_timestamp": 123.456  # временная метка видео (опциональная)
 }
 
 # Ошибка
@@ -117,6 +119,7 @@ ws.send(json.dumps(data))
 ```python
 class FrameRequest(BaseModel):
     image: str  # base64 JPEG
+    video_timestamp: float | None = None  # опциональная временная метка видео
 ```
 
 ### Исходящие
@@ -164,11 +167,13 @@ class FaceAnalysisResult(BaseModel):
 class FrameResponse(BaseModel):
     image: str             # base64 обработанного JPEG
     results: list[FaceAnalysisResult]
+    video_timestamp: float | None = None  # опциональная временная метка видео
 
 class OutputStreamFrameResponse(BaseModel):
     image_src: str         # base64 исходного JPEG
     image: str             # base64 обработанного JPEG
     results: list[FaceAnalysisResult]
+    video_timestamp: float | None = None  # опциональная временная метка видео
 
 class ErrorResponse(BaseModel):
     error: str
@@ -185,6 +190,7 @@ class ErrorResponse(BaseModel):
 {
     "image_src": "base64...",
     "image": "base64...",
-    "results": [...]
+    "results": [...],
+    "video_timestamp": 123.456  # опциональная временная метка видео
 }
 ```
