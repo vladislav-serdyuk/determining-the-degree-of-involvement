@@ -85,7 +85,7 @@ class HeadPoseEstimator:
             else:
                 roll = roll - 180
 
-        return pitch, yaw, roll
+        return -pitch, yaw, -roll
 
     def estimate(self, face_landmarks, image_width: int, image_height: int) -> HeadPoseEstimateResult | None:
         """
