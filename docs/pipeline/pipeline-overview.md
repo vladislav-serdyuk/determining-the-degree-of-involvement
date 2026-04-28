@@ -14,9 +14,12 @@
 | `ear_analyzer` | `EyeAspectRatioAnalyzer \| None` | нет | EAR-анализ глаз |
 | `head_pose_estimator` | `HeadPoseEstimator \| None` | нет | PnP-оценка позы головы |
 | `engagement_calculator` | `EngagementCalculator \| None` | нет | Расчёт итогового score |
-| `use_face_mesh` | `bool` | default `True` | Подтягивает MediaPipe Face Mesh, если нужен хотя бы одному из EAR/HPE |
+| `use_face_mesh` | `bool` | default `True` | Управляет инициализацией MediaPipe Face Mesh (см. ниже) |
 
-Если `ear_analyzer` и `head_pose_estimator` оба `None`, то Face Mesh не инициализируется независимо от `use_face_mesh`.
+Поведение `use_face_mesh`:
+
+- При `True` (default) Face Mesh инициализируется автоматически, если передан хотя бы один из `ear_analyzer` или `head_pose_estimator`. Если оба `None` - Face Mesh не инициализируется.
+- При `False` Face Mesh не инициализируется даже при наличии анализаторов. В этом случае EAR/HPE не получают лицевых точек и фактически "глушатся" принудительно - поля `ear` / `head_pose` в результате анализа всегда будут `None`. Применяется как ручное отключение mesh-зависимых модулей без удаления самих анализаторов.
 
 *Обязательность* модулей описана в [README.md](README.md#опциональность-модулей). Под необязательностью модуля `EngagementCalculator` понимаем то, что можно получать собранные метрики без использования представленного модуля вычисления итоговой вовлечённости. Например, если нужны сами показатели, а не конечная метрика. 
 
