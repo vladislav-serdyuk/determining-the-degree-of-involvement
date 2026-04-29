@@ -140,7 +140,7 @@ if not remaining:
     await redis.delete(f"room:{room_id}")            # Удалить саму комнату
 ```
 
-### Output Stream (гипервизор)
+### Output Stream (супервизор)
 
 Позволяет наблюдать за потоком другого клиента:
 

@@ -73,7 +73,7 @@ class FrameResponse(BaseModel):
 
 
 class OutputStreamFrameResponse(BaseModel):
-    """Исходящее WS-сообщение - кадр для гипервизора (output_stream endpoint)"""
+    """Исходящее WS-сообщение - кадр для супервизора (output_stream endpoint)"""
 
     image_src: str
     image: str
