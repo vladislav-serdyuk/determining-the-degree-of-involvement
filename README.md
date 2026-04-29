@@ -26,7 +26,7 @@
 
 Real-time facial emotion recognition system with attention tracking. Detects emotions, blinks, and head pose to analyze user engagement through webcam or video upload.
 
-![Demo Streamlit frontend](docs/demo-streamlit-frontend.gif)
+![Demo Streamlit frontend](docs/assets/demo-streamlit-frontend.gif)
 
 ## Quick Start
 
