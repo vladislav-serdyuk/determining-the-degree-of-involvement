@@ -90,4 +90,4 @@ score          ──► threshold map      ──► level
 - `session_start_time`
 - `frame_count`, `total_frames_analyzed`
 
-Вызывается при начале новой сессии. В текущей WS-архитектуре сессия равносильна времени жизни одного `Client` в комнате; для каждого клиента создаётся свой экземпляр `EngagementCalculator` в handler'е WS-эндпоинта (см. [api/stream.py](../../backend/app/api/stream.py) и [architecture.md](../architecture.md)).
+Вызывается при начале новой сессии. В текущей WS-архитектуре сессия равносильна времени жизни одного `Client` в комнате; для каждого клиента создаётся свой экземпляр `EngagementCalculator` в handler'е WS-эндпоинта (см. [api/stream.py](../../backend/app/api/stream.py) и [architecture.md](../backend/architecture.md)).
