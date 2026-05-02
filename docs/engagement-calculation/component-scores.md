@@ -73,8 +73,8 @@ eye_score = min(1.0, base_score * blink_modifier)
 
 | `attention_state` | Base score | Порог EAR |
 |-------------------|------------|-----------|
-| `Alert` | **1.0** | `avg_ear ≥ 0.30` + `blink_count ∈ [10, 25]` |
-| `Normal` | **0.7** | `avg_ear ≥ 0.25` или blink_count вне [10, 25] |
+| `Alert` | **1.0** | `avg_ear ≥ 0.30`|
+| `Normal` | **0.7** | `avg_ear ≥ 0.25`|
 | `Drowsy` | **0.4** | `avg_ear ≥ 0.20` |
 | `Very Drowsy` | **0.1** | `avg_ear < 0.20` |
 
