@@ -131,4 +131,4 @@ Fallback при `head_pose_data=None`: `head_pose_score = 0.5`.
 
 > Интерпретация fallback'а подчиняется той же логике, что и в случае EAR ([README.md](README.md#семантика-нейтрального-значения-05)).
 
-`roll` в классификацию не включён (см. [../pipeline/head-pose.md](../pipeline/head-pose-estimation.md#классификация-attention_state)).
+`roll` в классификацию не включён (см. [../pipeline/head-pose-estimation.md](../pipeline/head-pose-estimation.md#классификация-attention_state)).
