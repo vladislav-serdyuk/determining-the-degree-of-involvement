@@ -120,9 +120,9 @@ head_pose_score = HEAD_POSE_STATE_SCORES[attention_state]
 
 | `attention_state` | Score | Пороги |
 |-------------------|-------|--------|
-| `Highly Attentive` | **1.0** | `|pitch| < 10°`, `|yaw| < 15°` |
-| `Attentive` | **0.8** | `|pitch| < 20°`, `|yaw| < 25°` |
-| `Distracted` | **0.5** | `|pitch| < 30°`, `|yaw| < 40°` |
+| `Highly Attentive` | **1.0** | `\|pitch\| < 10°`, `\|yaw\| < 15°` |
+| `Attentive` | **0.8** | `\|pitch\| < 20°`, `\|yaw\| < 25°` |
+| `Distracted` | **0.5** | `\|pitch\| < 30°`, `\|yaw\| < 40°` |
 | `Very Distracted` | **0.2** | иначе |
 
 Без модификаторов. Пороги определяются в [`analyze_head_pose.py`](../../backend/app/services/video_processing/analyze_head_pose.py#L160).
