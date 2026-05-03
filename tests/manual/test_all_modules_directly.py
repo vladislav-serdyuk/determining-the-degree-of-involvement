@@ -190,7 +190,6 @@ class FaceMeshAnalyzer:
             ear_result = self.ear_analyzer.analyze(face_landmarks, w, h, face_id=0)
             if ear_result:
                 # Расчёт частоты моргания (предполагаемые ~30 FPS)
-                # TODO: уточнить метрику
                 # blink_rate = ear_result.blink_count * 2
                 results['eyes'] = ear_result
 

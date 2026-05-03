@@ -38,7 +38,6 @@ class EyeAspectRatioAnalyzeResult:
     attention_state: Literal["Alert", "Normal", "Drowsy", "Very Drowsy"] = "Normal"
 
 
-# TODO: донастройка параметров и порогов при практическом тесте механизма
 class EyeAspectRatioAnalyzer:
     """Анализ состояния глаз с использованием Eye Aspect Ratio (EAR)"""
 

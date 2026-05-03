@@ -156,7 +156,6 @@ class HeadPoseEstimator:
         return None
 
 
-# TODO: донастройка параметров и порогов при практическом тесте механизма
 def classify_attention_state(
     pitch: float, yaw: float, roll: float
 ) -> Literal["Highly Attentive", "Attentive", "Distracted", "Very Distracted"]:
