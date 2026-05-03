@@ -165,7 +165,7 @@ class EyeAspectRatioAnalyzer:
             blink_count=self.blink_totals[face_id],
             is_blinking=is_blinking,
             ear_history=list(self.ear_history[face_id]),
-            attention_state=classify_attention_by_ear(avg_ear, self.blink_totals[face_id]),
+            attention_state=classify_attention_by_ear(avg_ear),
         )
 
     def reset(self, face_id: int | None = None):
@@ -182,28 +182,24 @@ class EyeAspectRatioAnalyzer:
             self.ear_history.pop(face_id, None)
 
 
-def classify_attention_by_ear(avg_ear: float, blink_rate: float) -> Literal["Alert", "Normal", "Drowsy", "Very Drowsy"]:
+def classify_attention_by_ear(avg_ear: float) -> Literal["Alert", "Normal", "Drowsy", "Very Drowsy"]:
     """
-    Классификация состояния внимания на основе EAR и частоты моргания.
+    Классификация состояния внимания по среднему EAR текущего кадра.
 
     Args:
         avg_ear: Средний EAR
-        blink_rate: Частота моргания (морганий/минуту)
 
     Returns:
         Строка с уровнем внимания: "Alert", "Normal", "Drowsy", "Very Drowsy"
-    """
-    # Нормальная частота моргания: 15-20 раз/минуту
-    # Сниженная частота (< 5/мин) = сильная концентрация или усталость
-    # Повышенная частота (> 30/мин) = стресс или раздражение
 
+    Note:
+        Модификатор по реальной частоте моргания (rate per minute) применяется
+        отдельно в EngagementCalculator.calculate_eye_score через blink_modifier.
+    """
     if avg_ear >= settings.ear_alert_threshold:
-        if 10 <= blink_rate <= 25:
-            return "Alert"  # Нормальное состояние (внимательность, сосредоточненность)
-        else:
-            return "Normal"  # Немного отклонения (обычные, открытые глаза)
+        return "Alert"  # Широко открытые глаза - внимательность, сосредоточенность
     elif avg_ear >= settings.ear_drowsy_threshold:
-        return "Normal"  # Пограничное состояние (так же принимаем за нормальное)
+        return "Normal"  # Пограничное состояние (открытые глаза, сниженный тонус)
     elif avg_ear >= settings.ear_very_drowsy_threshold:
         return "Drowsy"  # Начало усталости (читаемая усталость)
     else:
