@@ -365,7 +365,14 @@ class EngagementCalculator:
             Словарь со статистикой
         """
         if not self.engagement_history:
-            return {"mean": 0.0, "std": 0.0, "min": 0.0, "max": 0.0, "total_frames": self.frame_count}
+            return {
+                "mean": 0.0,
+                "std": 0.0,
+                "min": 0.0,
+                "max": 0.0,
+                "total_frames": self.frame_count,
+                "current_window_size": 0,
+            }
 
         history_array = np.array(self.engagement_history)
 
