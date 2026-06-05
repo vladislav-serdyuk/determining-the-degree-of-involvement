@@ -48,6 +48,7 @@ docker compose up -d
 docker compose up -d --build
 ```
 
+> [!IMPORTANT]
 > Requires `nvidia-container-toolkit` for CUDA support.
 
 ### Manual
@@ -206,6 +207,7 @@ flowchart TB
 Engagement = 0.42 × Emotion + 0.33 × Eye_Score + 0.25 × HeadPose_Score
 ```
 
+> [!NOTE]
 > Weights may vary.
 
 ---
